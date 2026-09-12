@@ -253,9 +253,10 @@
         ];
 
         function estadoDe(mbps) {
-            if (mbps >= 40) return { texto: "Óptimo",  color: "#2ecc71" };
-            if (mbps >= 20) return { texto: "Aceptable", color: "#f39c12" };
-            return { texto: "Crítico", color: "#e74c3c" };
+            if (mbps >= 40) return { texto: "Excelente",  color: "#27ae60" };      // Verde oscuro
+            if (mbps >= 25) return { texto: "Bueno",      color: "#2ecc71" };      // Verde
+            if (mbps >= 10) return { texto: "Aceptable",  color: "#f39c12" };      // Naranja
+            return { texto: "Débil",        color: "#e74c3c" };                     // Rojo
         }
 
         // ==========================================================
