@@ -93,59 +93,6 @@
             50% { opacity: .4; transform: scale(.7); }
         }
 
-        .zone-row {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            padding: 10px;
-            margin: 6px 0;
-            border-radius: 6px;
-            background: rgba(255,255,255,0.05);
-            border-left: 3px solid #f1c40f;
-            cursor: pointer;
-            transition: background .2s ease;
-        }
-        .zone-row:hover { background: rgba(255,255,255,0.1); }
-
-        .zone-header {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-        .zone-swatch {
-            width: 12px; height: 12px; border-radius: 50%;
-            flex-shrink: 0;
-            box-shadow: 0 0 5px currentColor;
-        }
-        .zone-name {
-            flex: 1;
-        }
-
-        .zone-metrics {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 8px;
-            font-size: 10px;
-        }
-        .metric-item {
-            background: rgba(0,0,0,0.3);
-            padding: 6px;
-            border-radius: 4px;
-            text-align: center;
-        }
-        .metric-value {
-            font-weight: 700;
-            font-size: 12px;
-            color: #2ecc71;
-            display: block;
-        }
-        .metric-label {
-            color: #9db89f;
-            font-size: 9px;
-        }
-
         .measure-section {
             background: rgba(46, 204, 113, 0.1);
             border: 1px solid rgba(46, 204, 113, 0.3);
@@ -198,6 +145,59 @@
         .measure-status.error {
             color: #e74c3c;
             background: rgba(231, 76, 60, 0.1);
+        }
+
+        .zone-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 10px;
+            margin: 6px 0;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.05);
+            border-left: 3px solid #f1c40f;
+            cursor: pointer;
+            transition: background .2s ease;
+        }
+        .zone-row:hover { background: rgba(255,255,255,0.1); }
+
+        .zone-header {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .zone-swatch {
+            width: 12px; height: 12px; border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 0 5px currentColor;
+        }
+        .zone-name {
+            flex: 1;
+        }
+
+        .zone-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            font-size: 10px;
+        }
+        .metric-item {
+            background: rgba(0,0,0,0.3);
+            padding: 6px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .metric-value {
+            font-weight: 700;
+            font-size: 12px;
+            color: #2ecc71;
+            display: block;
+        }
+        .metric-label {
+            color: #9db89f;
+            font-size: 9px;
         }
 
         .ranking-section {
@@ -398,7 +398,7 @@
             <h3>📊 Estado de Zonas</h3>
             <div class="sub"><span class="live-dot"></span>Datos Reales Medidos</div>
 
-            <!-- SECCIÓN DE MEDICIÓN -->
+            <!-- NUEVO: SECCIÓN DE MEDICIÓN -->
             <div class="measure-section">
                 <button class="measure-button" id="measureBtn" onclick="enviarComandoMedir()">📡 Medir Ahora</button>
                 <div class="measure-status" id="measureStatus" style="display: none;"></div>
@@ -437,7 +437,7 @@
 
     <script>
         // ==========================================================
-        // FIREBASE CONFIGURATION
+        // NUEVO: FIREBASE CONFIGURATION
         // ==========================================================
         const firebaseConfig = {
             apiKey: "AIzaSyDh4qF9xXxXxXxXxXxXxXxXxXxXxXxXxX",
@@ -454,7 +454,7 @@
         const database = firebase.database();
 
         // ==========================================================
-        // 1. DATOS REALES / ERROR DE CODIGO AL MOSTRAR LOS DATOS CON EL SET RAMDOM
+        // 1. DATOS REALES NO MEDIOS / ERROR DE CODIGO AL MOSTRAR LOS DATOS CON EL SET RAMDOM
         // ==========================================================
         var datosReales = {
             biblioteca: {
@@ -514,7 +514,7 @@
         }).addTo(map);
 
         // ==========================================================
-        // 3. CAPA DE CALOR CON DATOS REALES
+        // 3. CAPA DE CALOR CON DATOS REALES ROJO ES MAYOR INTENSIDAD DE USUARIOS CONECTADOS
         // ==========================================================
         var heatLayer;
 
@@ -585,7 +585,7 @@
         });
 
         // ==========================================================
-        // 5. ACTUALIZAR PANEL EN VIVO
+        // 5. ACTUALIZAR PANEL EN VIVO /ERROR EN ESTE PANEL. TOCA ACTUALIZARLO Y PONERLE LA BASE DE DATOS DEL EXCEL
         // ==========================================================
         function actualizarPanel() {
             var html = '';
@@ -618,7 +618,7 @@
         }
 
         // ==========================================================
-        // 6. GRÁFICO COMPARATIVO
+        // 6. GRÁFICO COMPARATIVO ES SOLO ESTETICO EN LA PAGINA NO INFLUYE EN NADA
         // ==========================================================
         var chartInstance = null;
 
@@ -671,7 +671,7 @@
         }
 
         // ==========================================================
-        // 7. RANKING Y ESTADÍSTICAS
+        // 7. RANKING Y ESTADÍSTICAS/ SOLO ESTETICA COMO PARTE DE LA INFORMACION DE INTERES DE LOS USUARIOS
         // ==========================================================
         function actualizarRanking() {
             var ranking = zonas.sort((a, b) => b.descarga - a.descarga);
@@ -719,7 +719,7 @@
         }
 
         // ==========================================================
-        // 8. FUNCIONES DE MEDICIÓN CON FIREBASE
+        // NUEVO: 8. FUNCIONES DE MEDICIÓN CON FIREBASE
         // ==========================================================
         var midiendo = false;
 
@@ -777,7 +777,7 @@
         }
 
         // ==========================================================
-        // 9. GEOLOCALIZACIÓN EN TIEMPO REAL
+        // 9. GEOLOCALIZACIÓN EN TIEMPO REAL TOCA CUADRAR UN POCO EL RANGO YA QUE DENTRO DE LA UNIVERSIDAD SE VUELVE IMPRECISA
         // ==========================================================
         var userMarker = null;
         var userCircle = null;
