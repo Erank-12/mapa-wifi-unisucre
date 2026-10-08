@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Calor Wi-Fi - Universidad de Sucre</title>
+
+    <!-- CSS de Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js"></script>
+
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #1e1e1e;
+        }
+        header {
+            background-color: #1a4f24;
+            color: white;
+            text-align: center;
+            padding: 15px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border-bottom: 3px solid #f1c40f;
+            position: relative;
+            z-index: 10;
+        }
+        h2 { margin: 0; font-size: 24px; }
+        p { margin: 5px 0 0 0; font-size: 15px; opacity: 0.9; }
+
+        #map-wrap {
+            position: relative;
+            height: 82vh;
+            width: 95%;
+            margin: 20px auto;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+            border: 2px solid #555;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            background: #111;
+        }
+
+        #live-panel {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            z-index: 500;
+            background: rgba(20, 24, 20, 0.95);
+            border: 1px solid rgba(241, 196, 15, 0.35);
+            border-radius: 10px;
+            padding: 12px 14px;
+            min-width: 300px;
+            max-width: 380px;
+            color: #eee;
+            backdrop-filter: blur(3px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.45);
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        #live-panel h3 {
+            margin: 0 0 4px 0;
+            font-size: 13px;
+            letter-spacing: .3px;
+            color: #f1c40f;
+            font-weight: 600;
+        }
+        #live-panel .sub {
+            font-size: 10.5px;
+            color: #9db89f;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .live-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: #2ecc71;
+            box-shadow: 0 0 6px #2ecc71;
+            animation: livePulse 1.4s infinite ease-in-out;
+            flex-shrink: 0;
+        }
+        @keyframes livePulse {
+            0%,100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .4; transform: scale(.7); }
+        }
+
+        .zone-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 10px;
+            margin: 6px 0;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.05);
+            border-left: 3px solid #f1c40f;
+            cursor: pointer;
+            transition: background .2s ease;
+        }
+        .zone-row:hover { background: rgba(255,255,255,0.1); }
+
+        .zone-header {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .zone-swatch {
+            width: 12px; height: 12px; border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 0 5px currentColor;
+        }
+        .zone-name {
+            flex: 1;
+        }
+
+        .zone-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            font-size: 10px;
+        }
+        .metric-item {
+            background: rgba(0,0,0,0.3);
+            padding: 6px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .metric-value {
+            font-weight: 700;
+            font-size: 12px;
+            color: #2ecc71;
+            display: block;
+        }
+        .metric-label {
+            color: #9db89f;
+            font-size: 9px;
+        }
+
+        .measure-section {
+            background: rgba(46, 204, 113, 0.1);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+
+        .measure-button {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 2px solid #2ecc71;
+            border-radius: 6px;
+            background: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all .3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .measure-button:hover {
+            background: rgba(46, 204, 113, 0.4);
+            box-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
+        }
+        .measure-button:disabled {
+            background: rgba(100, 100, 100, 0.2);
+            border-color: #666;
+            color: #999;
+            cursor: not-allowed;
+        }
+
+        .measure-status {
+            font-size: 10px;
+            color: #9db89f;
+            padding: 8px;
+            text-align: center;
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+
+        .measure-status.success {
+            color: #2ecc71;
+            background: rgba(46, 204, 113, 0.1);
+        }
+
+        .measure-status.error {
+            color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+        }
+
+        .ranking-section {
+            border-top: 1px solid rgba(241, 196, 15, 0.2);
+            padding-top: 10px;
+            margin-top: 10px;
+        }
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px;
+            font-size: 11px;
+            margin: 4px 0;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+        }
+        .ranking-position {
+            font-weight: 700;
+            color: #f1c40f;
+            width: 20px;
+        }
+        .ranking-value {
+            font-weight: 600;
+            color: #2ecc71;
+        }
+
+        .stats-section {
+            border-top: 1px solid rgba(241, 196, 15, 0.2);
+            padding-top: 10px;
+            margin-top: 10px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 9px;
+        }
+        .stat-box {
+            background: rgba(0,0,0,0.3);
+            padding: 6px;
+            border-radius: 4px;
+            border-left: 2px solid #2196F3;
+        }
+        .stat-label {
+            color: #9db89f;
+            font-size: 8px;
+        }
+        .stat-value {
+            font-weight: 700;
+            color: #fff;
+            font-size: 11px;
+        }
+
+        .geolocation-section {
+            border-top: 1px solid rgba(241, 196, 15, 0.2);
+            padding-top: 8px;
+            margin-top: 8px;
+        }
+
+        .geo-button {
+            width: 100%;
+            padding: 8px 12px;
+            margin: 6px 0;
+            border: 1px solid rgba(241, 196, 15, 0.5);
+            border-radius: 6px;
+            background: rgba(241, 196, 15, 0.1);
+            color: #f1c40f;
+            font-weight: 600;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all .3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .geo-button:hover {
+            background: rgba(241, 196, 15, 0.25);
+            border-color: rgba(241, 196, 15, 0.8);
+        }
+        .geo-button.active {
+            background: rgba(46, 204, 113, 0.3);
+            border-color: #2ecc71;
+            color: #2ecc71;
+        }
+
+        .geo-info {
+            font-size: 10px;
+            color: #9db89f;
+            margin-top: 8px;
+            padding: 6px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
+            border-left: 2px solid #2196F3;
+            display: none;
+        }
+
+        #graficoComparativo {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 6px;
+            max-height: 200px;
+        }
+
+        .zone-label {
+            background: rgba(15, 18, 15, 0.82) !important;
+            border: 1px solid rgba(255,255,255,0.25) !important;
+            color: #fff !important;
+            font-weight: 600;
+            font-size: 12px;
+            padding: 3px 9px !important;
+            border-radius: 20px !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+        .zone-label::before { display: none; }
+
+        .pulse-wrap {
+            position: relative;
+            width: 26px;
+            height: 26px;
+        }
+        .pulse-core {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 14px; height: 14px;
+            margin: -7px 0 0 -7px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.9);
+            z-index: 3;
+            transition: background-color .5s ease;
+        }
+        .pulse-ring {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 14px; height: 14px;
+            margin: -7px 0 0 -7px;
+            border-radius: 50%;
+            opacity: 0.75;
+            animation: pulseRing 2.2s cubic-bezier(0.25,0.6,0.4,1) infinite;
+        }
+        @keyframes pulseRing {
+            0%   { transform: scale(1);   opacity: 0.55; }
+            70%  { transform: scale(3.4); opacity: 0; }
+            100% { transform: scale(3.4); opacity: 0; }
+        }
+
+        .leaflet-popup-content-wrapper {
+            background: rgba(255, 255, 255, 0.97);
+            border-radius: 10px;
+        }
+        .popup-box { min-width: 220px; text-align: center; font-family: inherit; }
+        .popup-box .zona-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+        .popup-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .popup-stat {
+            background: #f5f5f5;
+            padding: 6px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+        .popup-stat-value {
+            font-weight: 700;
+            font-size: 13px;
+            color: #1a4f24;
+        }
+        .popup-stat-label {
+            color: #666;
+            font-size: 9px;
+        }
+        .popup-photo-placeholder {
+            width: 100%;
+            height: 70px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #777;
+            background: repeating-linear-gradient(45deg, #eee, #eee 8px, #f6f6f6 8px, #f6f6f6 16px);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h2>Diagnóstico de Red Wi-Fi: Universidad de Sucre (Sede Puerta Roja)</h2>
+        <p>Análisis Estadístico - Velocidad de Descarga, Subida y Latencia</p>
+    </header>
+
+    <div id="map-wrap">
+        <div id="map"></div>
+
+        <div id="live-panel">
+            <h3>📊 Estado de Zonas</h3>
+            <div class="sub"><span class="live-dot"></span>Datos Reales Medidos</div>
+
+            <!-- SECCIÓN DE MEDICIÓN -->
+            <div class="measure-section">
+                <button class="measure-button" id="measureBtn" onclick="enviarComandoMedir()">📡 Medir Ahora</button>
+                <div class="measure-status" id="measureStatus" style="display: none;"></div>
+            </div>
+
+            <div id="zone-rows"></div>
+
+            <div id="graficoComparativo">
+                <canvas id="chartZonas"></canvas>
+            </div>
+
+            <div class="ranking-section">
+                <h3 style="margin: 0 0 6px 0; font-size: 12px; color: #f1c40f;">🏆 Ranking de Descarga</h3>
+                <div id="ranking-list"></div>
+            </div>
+
+            <div class="stats-section" id="statsSection">
+                <h3 style="margin: 0 0 6px 0; font-size: 12px; color: #f1c40f;">📈 Estadísticas Generales</h3>
+                <div class="stats-grid" id="stats-grid"></div>
+            </div>
+
+            <div class="geolocation-section">
+                <button class="geo-button" id="geoBtn" onclick="toggleGeolocalización()">📍 Activar Ubicación</button>
+                <div class="geo-info" id="geoInfo">
+                    <div><strong>Lat:</strong> <span id="geoLat">--</span></div>
+                    <div><strong>Lng:</strong> <span id="geoLng">--</span></div>
+                    <div><strong>Precisión:</strong> <span id="geoPrecision">--</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts de Leaflet y plugin Heatmap -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+    <script>
+        // ==========================================================
+        // FIREBASE CONFIGURATION
+        // ==========================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyDh4qF9xXxXxXxXxXxXxXxXxXxXxXxXxX",
+            authDomain: "mapa-wifi-unisucre.firebaseapp.com",
+            databaseURL: "https://mapa-wifi-unisucre-default-rtdb.firebaseio.com",
+            projectId: "mapa-wifi-unisucre",
+            storageBucket: "mapa-wifi-unisucre.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // ==========================================================
+        // 1. DATOS REALES / ERROR DE CODIGO AL MOSTRAR LOS DATOS CON EL SET RAMDOM
+        // ==========================================================
+        var datosReales = {
+            biblioteca: {
+                nombre: "Biblioteca",
+                lat: 9.31479142149925,
+                lng: -75.38830251874937,
+                descarga: 52.18,
+                subida: 41.06,
+                ping: 15.10,
+                min_desc: 44.73,
+                max_desc: 56.37
+            },
+            bloque1: {
+                nombre: "Bloque 1",
+                lat: 9.315606363782312,
+                lng: -75.38727989191376,
+                descarga: 47.34,
+                subida: 35.09,
+                ping: 19.10,
+                min_desc: 40.99,
+                max_desc: 55.53
+            },
+            cafeteria: {
+                nombre: "Cafetería",
+                lat: 9.316013505876915,
+                lng: -75.38663225411734,
+                descarga: 28.24,
+                subida: 21.65,
+                ping: 33.60,
+                min_desc: 23.84,
+                max_desc: 35.13
+            },
+            polideportivo: {
+                nombre: "Polideportivo",
+                lat: 9.316005859151925,
+                lng: -75.38867881751805,
+                descarga: 16.80,
+                subida: 12.49,
+                ping: 57.50,
+                min_desc: 6.50,
+                max_desc: 22.90
+            }
+        };
+
+        var zonas = Object.values(datosReales);
+
+        // ==========================================================
+        // 2. INICIALIZAR MAPA
+        // ==========================================================
+        var BASE_ZOOM = 18;
+        var map = L.map('map', { zoomSnap: 0.25 }).setView([9.3155, -75.3876], BASE_ZOOM);
+
+        L.tileLayer('https://tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19,
+            minZoom: 15
+        }).addTo(map);
+
+        // ==========================================================
+        // 3. CAPA DE CALOR CON DATOS REALES
+        // ==========================================================
+        var heatLayer;
+
+        function actualizarCalor() {
+            var heatData = zonas.map(z => [z.lat, z.lng, z.descarga / 60]);
+
+            if (heatLayer) map.removeLayer(heatLayer);
+
+            var radio = 85 + (BASE_ZOOM - map.getZoom()) * 5;
+            var blur = Math.max(25, 40 - (BASE_ZOOM - map.getZoom()) * 2);
+
+            heatLayer = L.heatLayer(heatData, {
+                radius: radio,
+                blur: blur,
+                maxZoom: 19,
+                minOpacity: 0.5,
+                gradient: {
+                    0.0: '#0000ff',
+                    0.25: '#00ff00',
+                    0.5: '#ffff00',
+                    0.75: '#ff7f00',
+                    1.0: '#ff0000'
+                }
+            }).addTo(map);
+        }
+
+        // ==========================================================
+        // 4. MARCADORES Y POPUPS
+        // ==========================================================
+        var marcadores = {};
+
+        zonas.forEach(function(zona) {
+            var html = '<div class="popup-box">' +
+                '<div class="zona-title">' + zona.nombre + '</div>' +
+                '<div class="popup-stats">' +
+                '  <div class="popup-stat"><div class="popup-stat-value">' + zona.descarga.toFixed(2) + '</div><div class="popup-stat-label">Descarga (Mbps)</div></div>' +
+                '  <div class="popup-stat"><div class="popup-stat-value">' + zona.subida.toFixed(2) + '</div><div class="popup-stat-label">Subida (Mbps)</div></div>' +
+                '  <div class="popup-stat"><div class="popup-stat-value">' + zona.ping.toFixed(1) + '</div><div class="popup-stat-label">Ping (ms)</div></div>' +
+                '</div>' +
+                '<div class="popup-photo-placeholder">Datos reales medidos</div>' +
+                '</div>';
+
+            var popup = L.popup({ closeButton: false }).setContent(html);
+
+            var pulseDiv = L.DomUtil.create('div', 'pulse-wrap');
+            var core = L.DomUtil.create('div', 'pulse-core', pulseDiv);
+            var ring = L.DomUtil.create('div', 'pulse-ring', pulseDiv);
+
+            var customIcon = L.divIcon({
+                html: pulseDiv,
+                iconSize: [26, 26],
+                className: ''
+            });
+
+            var marker = L.marker([zona.lat, zona.lng], { icon: customIcon })
+                .bindPopup(popup)
+                .addTo(map);
+
+            var label = L.marker([zona.lat, zona.lng], {
+                icon: L.divIcon({
+                    html: '<div class="zone-label">' + zona.nombre + '</div>',
+                    className: '',
+                    iconSize: [100, 30]
+                })
+            }).addTo(map);
+
+            marcadores[zona.nombre] = { marker: marker, core: core, label: label };
+        });
+
+        // ==========================================================
+        // 5. ACTUALIZAR PANEL EN VIVO
+        // ==========================================================
+        function actualizarPanel() {
+            var html = '';
+            zonas.forEach(function(zona) {
+                var color;
+                if (zona.descarga >= 45) {
+                    color = '#2ecc71';
+                } else if (zona.descarga >= 30) {
+                    color = '#f39c12';
+                } else {
+                    color = '#e74c3c';
+                }
+
+                html += '<div class="zone-row">' +
+                    '<div class="zone-header">' +
+                    '<div class="zone-swatch" style="background: ' + color + '; box-shadow: 0 0 5px ' + color + ';"></div>' +
+                    '<div class="zone-name">' + zona.nombre + '</div>' +
+                    '</div>' +
+                    '<div class="zone-metrics">' +
+                    '<div class="metric-item"><span class="metric-value">' + zona.descarga.toFixed(2) + '</span><span class="metric-label">Desc</span></div>' +
+                    '<div class="metric-item"><span class="metric-value">' + zona.subida.toFixed(2) + '</span><span class="metric-label">Subida</span></div>' +
+                    '<div class="metric-item"><span class="metric-value">' + zona.ping.toFixed(1) + '</span><span class="metric-label">Ping</span></div>' +
+                    '</div>' +
+                    '</div>';
+
+                marcadores[zona.nombre].core.style.backgroundColor = color;
+            });
+
+            document.getElementById('zone-rows').innerHTML = html;
+        }
+
+        // ==========================================================
+        // 6. GRÁFICO COMPARATIVO
+        // ==========================================================
+        var chartInstance = null;
+
+        function crearGraficoComparativo() {
+            var ctx = document.getElementById('chartZonas').getContext('2d');
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: zonas.map(z => z.nombre),
+                    datasets: [
+                        {
+                            label: 'Descarga (Mbps)',
+                            data: zonas.map(z => z.descarga),
+                            backgroundColor: '#2ecc71',
+                            borderColor: '#27ae60',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Subida (Mbps)',
+                            data: zonas.map(z => z.subida),
+                            backgroundColor: '#3498db',
+                            borderColor: '#2980b9',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 60,
+                            ticks: { color: '#9db89f', font: { size: 9 } },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
+                        x: {
+                            ticks: { color: '#9db89f', font: { size: 9 } },
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#9db89f', font: { size: 9 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==========================================================
+        // 7. RANKING Y ESTADÍSTICAS
+        // ==========================================================
+        function actualizarRanking() {
+            var ranking = zonas.sort((a, b) => b.descarga - a.descarga);
+            var html = '';
+
+            ranking.forEach(function(zona, index) {
+                var emoji = ['🥇', '🥈', '🥉', '4️⃣'][index];
+                html += '<div class="ranking-item">' +
+                    '<span class="ranking-position">' + emoji + '</span>' +
+                    '<span style="flex:1; margin-left: 8px;">' + zona.nombre + '</span>' +
+                    '<span class="ranking-value">' + zona.descarga.toFixed(2) + ' Mbps</span>' +
+                    '</div>';
+            });
+
+            document.getElementById('ranking-list').innerHTML = html;
+        }
+
+        function actualizarEstadisticas() {
+            var descargasProm = zonas.map(z => z.descarga);
+            var subidaProm = zonas.map(z => z.subida);
+            var pings = zonas.map(z => z.ping);
+
+            var promDescarga = (descargasProm.reduce((a, b) => a + b) / descargasProm.length).toFixed(2);
+            var promSubida = (subidaProm.reduce((a, b) => a + b) / subidaProm.length).toFixed(2);
+            var promPing = (pings.reduce((a, b) => a + b) / pings.length).toFixed(2);
+
+            var html = '<div class="stat-box">' +
+                '<div class="stat-label">Descarga Promedio</div>' +
+                '<div class="stat-value">' + promDescarga + ' Mbps</div>' +
+                '</div>' +
+                '<div class="stat-box">' +
+                '<div class="stat-label">Subida Promedio</div>' +
+                '<div class="stat-value">' + promSubida + ' Mbps</div>' +
+                '</div>' +
+                '<div class="stat-box">' +
+                '<div class="stat-label">Ping Promedio</div>' +
+                '<div class="stat-value">' + promPing + ' ms</div>' +
+                '</div>' +
+                '<div class="stat-box">' +
+                '<div class="stat-label">Mejor Zona</div>' +
+                '<div class="stat-value">' + zonas[0].nombre + '</div>' +
+                '</div>';
+
+            document.getElementById('stats-grid').innerHTML = html;
+        }
+
+        // ==========================================================
+        // 8. FUNCIONES DE MEDICIÓN CON FIREBASE
+        // ==========================================================
+        var midiendo = false;
+
+        function enviarComandoMedir() {
+            if (midiendo) return;
+
+            midiendo = true;
+            var btn = document.getElementById('measureBtn');
+            btn.disabled = true;
+
+            var statusEl = document.getElementById('measureStatus');
+            statusEl.style.display = 'block';
+            statusEl.textContent = '⏳ Esperando respuesta del ESP32...';
+            statusEl.className = 'measure-status';
+
+            // Enviar comando "medir" a Firebase
+            database.ref('comando').set('medir', function(error) {
+                if (error) {
+                    statusEl.textContent = '❌ Error al enviar comando';
+                    statusEl.className = 'measure-status error';
+                    midiendo = false;
+                    btn.disabled = false;
+                    setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+                } else {
+                    console.log('Comando enviado, esperando respuesta...');
+
+                    // Escuchar respuesta del ESP32
+                    var timeout = setTimeout(() => {
+                        statusEl.textContent = '❌ Tiempo agotado';
+                        statusEl.className = 'measure-status error';
+                        midiendo = false;
+                        btn.disabled = false;
+                        setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+                    }, 10000);
+
+                    database.ref('mediciones').limitToLast(1).on('value', function(snapshot) {
+                        if (snapshot.exists()) {
+                            clearTimeout(timeout);
+                            var datos = snapshot.val();
+                            var ultimaMedicion = Object.values(datos)[0];
+
+                            if (ultimaMedicion && ultimaMedicion.rssi) {
+                                statusEl.innerHTML = '✅ Medición recibida<br>RSSI: ' + ultimaMedicion.rssi + ' dBm<br>Ping: ' + ultimaMedicion.ping + ' ms';
+                                statusEl.className = 'measure-status success';
+                                console.log('Datos recibidos:', ultimaMedicion);
+                            }
+
+                            midiendo = false;
+                            btn.disabled = false;
+                            setTimeout(() => { statusEl.style.display = 'none'; }, 4000);
+                        }
+                    });
+                }
+            });
+        }
+
+        // ==========================================================
+        // 9. GEOLOCALIZACIÓN EN TIEMPO REAL
+        // ==========================================================
+        var userMarker = null;
+        var userCircle = null;
+        var watchId = null;
+        var geoActivo = false;
+
+        function toggleGeolocalización() {
+            if (geoActivo) {
+                detenerGeolocalización();
+            } else {
+                iniciarGeolocalización();
+            }
+        }
+
+        function iniciarGeolocalización() {
+            if (!navigator.geolocation) {
+                alert('Tu navegador no soporta geolocalización');
+                return;
+            }
+
+            var opciones = {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            };
+
+            watchId = navigator.geolocation.watchPosition(
+                mostrarUbicacion,
+                manejarError,
+                opciones
+            );
+
+            geoActivo = true;
+            document.getElementById('geoBtn').textContent = '⏹ Detener Ubicación';
+            document.getElementById('geoBtn').classList.add('active');
+            document.getElementById('geoInfo').style.display = 'block';
+        }
+
+        function detenerGeolocalización() {
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+
+            if (userMarker) {
+                map.removeLayer(userMarker);
+                userMarker = null;
+            }
+
+            if (userCircle) {
+                map.removeLayer(userCircle);
+                userCircle = null;
+            }
+
+            geoActivo = false;
+            document.getElementById('geoBtn').textContent = '📍 Activar Ubicación';
+            document.getElementById('geoBtn').classList.remove('active');
+            document.getElementById('geoInfo').style.display = 'none';
+        }
+
+        function mostrarUbicacion(posicion) {
+            var lat = posicion.coords.latitude;
+            var lng = posicion.coords.longitude;
+            var precision = Math.round(posicion.coords.accuracy);
+
+            document.getElementById('geoLat').textContent = lat.toFixed(6);
+            document.getElementById('geoLng').textContent = lng.toFixed(6);
+            document.getElementById('geoPrecision').textContent = precision + ' m';
+
+            if (!userMarker) {
+                map.setView([lat, lng], 19);
+            }
+
+            if (userMarker) {
+                userMarker.setLatLng([lat, lng]);
+            } else {
+                var miIcono = L.divIcon({
+                    html: '<div style="background: #2196F3; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>',
+                    iconSize: [26, 26],
+                    className: ''
+                });
+
+                userMarker = L.marker([lat, lng], { icon: miIcono })
+                    .bindPopup('📍 Tu Ubicación Actual')
+                    .addTo(map);
+            }
+
+            if (userCircle) {
+                userCircle.setLatLng([lat, lng]).setRadius(precision);
+            } else {
+                userCircle = L.circle([lat, lng], {
+                    radius: precision,
+                    color: '#2196F3',
+                    fillColor: '#2196F3',
+                    fillOpacity: 0.15,
+                    weight: 2,
+                    dashArray: '5, 5'
+                }).addTo(map);
+            }
+        }
+
+        function manejarError(error) {
+            console.log('Error: Geolocalización no disponible');
+            detenerGeolocalización();
+        }
+
+        // ==========================================================
+        // 10. INICIALIZAR TODO
+        // ==========================================================
+        map.on('zoom', actualizarCalor);
+
+        actualizarCalor();
+        actualizarPanel();
+        crearGraficoComparativo();
+        actualizarRanking();
+        actualizarEstadisticas();
+    </script>
+</body>
+</html>
