@@ -9,9 +9,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- Chart.js para gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Firebase SDK v9+ with global bundle -->
-    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
 
     <style>
         * { box-sizing: border-box; }
@@ -437,8 +434,9 @@
 
     <script>
         // ==========================================================
-        // NUEVO: FIREBASE CONFIGURATION
+        // FIREBASE CONFIGURATION (temporarily disabled for testing)
         // ==========================================================
+        // Firebase will be integrated with a proper bundler/build system
         const firebaseConfig = {
             apiKey: "AIzaSyDh4qF9xXxXxXxXxXxXxXxXxXxXxXxXxX",
             authDomain: "mapa-wifi-unisucre.firebaseapp.com",
@@ -449,9 +447,10 @@
             appId: "YOUR_APP_ID"
         };
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
+        // Initialize Firebase (commented for now - will use mock database)
+        // firebase.initializeApp(firebaseConfig);
+        // const database = firebase.database();
+        const database = null;
 
         // ==========================================================
         // 1. DATOS REALES NO MEDIOS / ERROR DE CODIGO AL MOSTRAR LOS DATOS CON EL SET RAMDOM
@@ -725,6 +724,11 @@
 
         function enviarComandoMedir() {
             if (midiendo) return;
+
+            if (!database) {
+                alert('Firebase aún no está configurado. Conecta tu ESP32 primero.');
+                return;
+            }
 
             midiendo = true;
             var btn = document.getElementById('measureBtn');
