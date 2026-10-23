@@ -406,9 +406,6 @@
     <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 
     <script>
-        // ==========================================================
-        // 1. DATOS REALES NO MEDIOS / ERROR DE CODIGO AL MOSTRAR LOS DATOS CON EL SET RAMDOM
-        // ==========================================================
         var datosReales = {
             biblioteca: {
                 nombre: "Biblioteca",
@@ -454,9 +451,6 @@
 
         var zonas = Object.values(datosReales);
 
-        // ==========================================================
-        // 2. INICIALIZAR MAPA
-        // ==========================================================
         var BASE_ZOOM = 18;
         var map = L.map('map', { zoomSnap: 0.25 }).setView([9.3155, -75.3876], BASE_ZOOM);
 
@@ -466,9 +460,6 @@
             minZoom: 15
         }).addTo(map);
 
-        // ==========================================================
-        // 3. CAPA DE CALOR CON DATOS REALES ROJO ES MAYOR INTENSIDAD DE USUARIOS CONECTADOS
-        // ==========================================================
         var heatLayer;
 
         function actualizarCalor() {
@@ -494,9 +485,6 @@
             }).addTo(map);
         }
 
-        // ==========================================================
-        // 4. MARCADORES Y POPUPS
-        // ==========================================================
         var marcadores = {};
 
         zonas.forEach(function(zona) {
@@ -537,9 +525,6 @@
             marcadores[zona.nombre] = { marker: marker, core: core, label: label };
         });
 
-        // ==========================================================
-        // 5. ACTUALIZAR PANEL EN VIVO /ERROR EN ESTE PANEL. TOCA ACTUALIZARLO Y PONERLE LA BASE DE DATOS DEL EXCEL
-        // ==========================================================
         function actualizarPanel() {
             var html = '';
             zonas.forEach(function(zona) {
@@ -570,9 +555,6 @@
             document.getElementById('zone-rows').innerHTML = html;
         }
 
-        // ==========================================================
-        // 6. GRÁFICO COMPARATIVO ES SOLO ESTETICO EN LA PAGINA NO INFLUYE EN NADA
-        // ==========================================================
         var chartInstance = null;
 
         function crearGraficoComparativo() {
@@ -623,9 +605,6 @@
             });
         }
 
-        // ==========================================================
-        // 7. RANKING Y ESTADÍSTICAS/ SOLO ESTETICA COMO PARTE DE LA INFORMACION DE INTERES DE LOS USUARIOS
-        // ==========================================================
         function actualizarRanking() {
             var ranking = zonas.sort((a, b) => b.descarga - a.descarga);
             var html = '';
@@ -671,9 +650,6 @@
             document.getElementById('stats-grid').innerHTML = html;
         }
 
-        // ==========================================================
-        // 8. GEOLOCALIZACIÓN EN TIEMPO REAL TOCA CUADRAR UN POCO EL RANGO YA QUE DENTRO DE LA UNIVERSIDAD SE VUELVE IMPRECISA
-        // ==========================================================
         var userMarker = null;
         var userCircle = null;
         var watchId = null;
@@ -779,9 +755,6 @@
             detenerGeolocalización();
         }
 
-        // ==========================================================
-        // 9. SPEEDTEST EN TIEMPO REAL VIA WEBSOCKET
-        // ==========================================================
         var ws = null;
         var midiendo = false;
 
@@ -799,10 +772,7 @@
             document.getElementById('speedtestBox').style.display = 'block';
             document.getElementById('speedStatus').textContent = '🔄 Conectando...';
             
-            // Conectar WebSocket
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const host = window.location.host;
-            ws = new WebSocket(protocol + '//' + host);
+            ws = new WebSocket('wss://mapa-wifi-backend.onrender.com');
             
             ws.onopen = () => {
                 console.log('✓ WebSocket conectado');
@@ -837,9 +807,6 @@
             document.getElementById('speedStatus').textContent = '✓ Última actualización: ' + new Date().toLocaleTimeString();
         }
 
-        // ==========================================================
-        // 10. INICIALIZAR TODO
-        // ==========================================================
         map.on('zoom', actualizarCalor);
         
         actualizarCalor();
