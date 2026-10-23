@@ -383,8 +383,8 @@
                         </div>
                         
                         <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center;">
-                            <div style="color: #f39c12; font-size: 10px;">RSSI</div>
-                            <div id="speedRssi" style="font-weight: 700; color: #2ecc71; font-size: 14px;">-- dBm</div>
+                            <div style="color: #f39c12; font-size: 10px;">Subida</div>
+                            <div id="speedUp" style="font-weight: 700; color: #2ecc71; font-size: 14px;">-- Mbps</div>
                         </div>
                     </div>
                     
@@ -799,10 +799,11 @@
         }
 
         function actualizarSpeedtest(datos) {
-            const mbps = (datos.velocidad_kbps / 1024).toFixed(2);
+            const descargaMbps = (datos.velocidad_kbps / 1024).toFixed(2);
+            const subidaMbps = (datos.upload_kbps / 1024).toFixed(2);
             
-            document.getElementById('speedDown').textContent = mbps + ' Mbps';
-            document.getElementById('speedRssi').textContent = datos.rssi + ' dBm';
+            document.getElementById('speedDown').textContent = descargaMbps + ' Mbps';
+            document.getElementById('speedUp').textContent = subidaMbps + ' Mbps';
             document.getElementById('speedPing').textContent = datos.ping + ' ms';
             document.getElementById('speedStatus').textContent = '✓ Última actualización: ' + new Date().toLocaleTimeString();
         }
