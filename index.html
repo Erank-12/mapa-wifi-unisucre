@@ -3,12 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa de Calor Wi-Fi - Universidad de Sucre</title>
+    <title>Mapa de Calidad Wi-Fi - Universidad de Sucre</title>
 
-    <!-- CSS de Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Chart.js para gráficos -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         * { box-sizing: border-box; }
@@ -22,14 +19,14 @@
             background-color: #1a4f24;
             color: white;
             text-align: center;
-            padding: 15px 0;
+            padding: 15px 10px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             border-bottom: 3px solid #f1c40f;
             position: relative;
             z-index: 10;
         }
         h2 { margin: 0; font-size: 24px; }
-        p { margin: 5px 0 0 0; font-size: 15px; opacity: 0.9; }
+        header p { margin: 5px 0 0 0; font-size: 15px; opacity: 0.9; }
 
         #map-wrap {
             position: relative;
@@ -55,8 +52,7 @@
             border: 1px solid rgba(241, 196, 15, 0.35);
             border-radius: 10px;
             padding: 12px 14px;
-            min-width: 300px;
-            max-width: 380px;
+            width: 320px;
             color: #eee;
             backdrop-filter: blur(3px);
             box-shadow: 0 4px 16px rgba(0,0,0,0.45);
@@ -64,186 +60,153 @@
             overflow-y: auto;
         }
         #live-panel h3 {
-            margin: 0 0 4px 0;
+            margin: 0 0 8px 0;
             font-size: 13px;
             letter-spacing: .3px;
             color: #f1c40f;
             font-weight: 600;
         }
-        #live-panel .sub {
+
+        .aviso {
+            font-size: 11px;
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            background: rgba(231, 76, 60, 0.15);
+            border: 1px solid rgba(231, 76, 60, 0.5);
+            color: #f5b7b1;
+        }
+
+        .campo { margin-bottom: 8px; }
+        .campo label {
+            display: block;
             font-size: 10.5px;
             color: #9db89f;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+            margin-bottom: 3px;
         }
-        .live-dot {
-            width: 7px; height: 7px; border-radius: 50%;
-            background: #2ecc71;
-            box-shadow: 0 0 6px #2ecc71;
-            animation: livePulse 1.4s infinite ease-in-out;
-            flex-shrink: 0;
-        }
-        @keyframes livePulse {
-            0%,100% { opacity: 1; transform: scale(1); }
-            50% { opacity: .4; transform: scale(.7); }
-        }
-
-        .zone-row {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            padding: 10px;
-            margin: 6px 0;
-            border-radius: 6px;
-            background: rgba(255,255,255,0.05);
-            border-left: 3px solid #f1c40f;
-            cursor: pointer;
-            transition: background .2s ease;
-        }
-        .zone-row:hover { background: rgba(255,255,255,0.1); }
-        
-        .zone-header {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-        .zone-swatch {
-            width: 12px; height: 12px; border-radius: 50%;
-            flex-shrink: 0;
-            box-shadow: 0 0 5px currentColor;
-        }
-        .zone-name {
-            flex: 1;
-        }
-
-        .zone-metrics {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 8px;
-            font-size: 10px;
-        }
-        .metric-item {
-            background: rgba(0,0,0,0.3);
-            padding: 6px;
-            border-radius: 4px;
-            text-align: center;
-        }
-        .metric-value {
-            font-weight: 700;
-            font-size: 12px;
-            color: #2ecc71;
-            display: block;
-        }
-        .metric-label {
-            color: #9db89f;
-            font-size: 9px;
-        }
-
-        .ranking-section {
-            border-top: 1px solid rgba(241, 196, 15, 0.2);
-            padding-top: 10px;
-            margin-top: 10px;
-        }
-        .ranking-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 6px;
-            font-size: 11px;
-            margin: 4px 0;
-            background: rgba(255,255,255,0.05);
-            border-radius: 4px;
-        }
-        .ranking-position {
-            font-weight: 700;
-            color: #f1c40f;
-            width: 20px;
-        }
-        .ranking-value {
-            font-weight: 600;
-            color: #2ecc71;
-        }
-
-        .stats-section {
-            border-top: 1px solid rgba(241, 196, 15, 0.2);
-            padding-top: 10px;
-            margin-top: 10px;
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            font-size: 9px;
-        }
-        .stat-box {
-            background: rgba(0,0,0,0.3);
-            padding: 6px;
-            border-radius: 4px;
-            border-left: 2px solid #2196F3;
-        }
-        .stat-label {
-            color: #9db89f;
-            font-size: 8px;
-        }
-        .stat-value {
-            font-weight: 700;
-            color: #fff;
-            font-size: 11px;
-        }
-
-        .geolocation-section {
-            border-top: 1px solid rgba(241, 196, 15, 0.2);
-            padding-top: 8px;
-            margin-top: 8px;
-        }
-
-        .geo-button {
+        .campo select, .campo input {
             width: 100%;
-            padding: 8px 12px;
-            margin: 6px 0;
-            border: 1px solid rgba(241, 196, 15, 0.5);
+            padding: 8px;
+            font-size: 13px;
             border-radius: 6px;
-            background: rgba(241, 196, 15, 0.1);
-            color: #f1c40f;
-            font-weight: 600;
-            font-size: 11px;
+            border: 1px solid rgba(241, 196, 15, 0.4);
+            background: rgba(0, 0, 0, 0.35);
+            color: #eee;
+        }
+        .campo select:disabled, .campo input:disabled { opacity: 0.5; }
+
+        .measure-button {
+            width: 100%;
+            padding: 12px;
+            margin: 6px 0;
+            border: 2px solid #2ecc71;
+            border-radius: 6px;
+            background: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+            font-weight: 700;
+            font-size: 13px;
             cursor: pointer;
             transition: all .3s ease;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        .geo-button:hover {
-            background: rgba(241, 196, 15, 0.25);
-            border-color: rgba(241, 196, 15, 0.8);
+        .measure-button:hover:not(:disabled) {
+            background: rgba(46, 204, 113, 0.4);
+            box-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
         }
-        .geo-button.active {
-            background: rgba(46, 204, 113, 0.3);
-            border-color: #2ecc71;
-            color: #2ecc71;
+        .measure-button:disabled {
+            background: rgba(100, 100, 100, 0.2);
+            border-color: #666;
+            color: #999;
+            cursor: not-allowed;
         }
 
-        .geo-info {
-            font-size: 10px;
-            color: #9db89f;
+        #resultados {
+            display: none;
+            margin-top: 8px;
+            padding: 10px;
+            background: rgba(46, 204, 113, 0.08);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            border-radius: 6px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .stat {
+            background: rgba(0,0,0,0.3);
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-label { color: #f39c12; font-size: 10px; }
+        .stat-value { font-weight: 700; color: #2ecc71; font-size: 16px; }
+        .stat-unit { color: #9db89f; font-size: 10px; font-weight: 400; }
+
+        #estado {
             margin-top: 8px;
             padding: 6px;
             background: rgba(0,0,0,0.3);
             border-radius: 4px;
-            border-left: 2px solid #2196F3;
+            text-align: center;
+            color: #9db89f;
+            font-size: 11px;
+        }
+        #estado.ok { color: #2ecc71; }
+        #estado.error { color: #e74c3c; background: rgba(231, 76, 60, 0.1); }
+
+        .barra {
             display: none;
+            height: 4px;
+            margin-top: 8px;
+            border-radius: 2px;
+            overflow: hidden;
+            background: rgba(255,255,255,0.1);
+        }
+        .barra.activa { display: block; }
+        .barra::after {
+            content: '';
+            display: block;
+            height: 100%;
+            width: 35%;
+            background: #2ecc71;
+            animation: barra 1.2s infinite ease-in-out;
+        }
+        @keyframes barra {
+            0% { margin-left: -35%; }
+            100% { margin-left: 100%; }
         }
 
-        #graficoComparativo {
-            margin-top: 10px;
-            padding: 10px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 6px;
-            max-height: 200px;
+        .nota {
+            margin-top: 8px;
+            font-size: 10px;
+            line-height: 1.4;
+            color: #8a9a8c;
         }
+
+        .ranking-section {
+            border-top: 1px solid rgba(241, 196, 15, 0.2);
+            padding-top: 10px;
+            margin-top: 12px;
+        }
+        .ranking-sub { font-size: 10px; color: #9db89f; margin: -4px 0 8px 0; }
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 8px;
+            font-size: 12px;
+            margin: 4px 0;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+            border-left: 3px solid #f1c40f;
+        }
+        .ranking-pos { width: 22px; text-align: center; font-weight: 700; color: #f1c40f; }
+        .ranking-nombre { flex: 1; }
+        .ranking-nombre small { display: block; color: #9db89f; font-size: 10px; }
+        .ranking-valor { font-weight: 700; }
+        .ranking-vacio { font-size: 11px; color: #9db89f; padding: 6px 2px; }
 
         .zone-label {
             background: rgba(15, 18, 15, 0.82) !important;
@@ -254,14 +217,11 @@
             padding: 3px 9px !important;
             border-radius: 20px !important;
             box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            white-space: nowrap;
         }
         .zone-label::before { display: none; }
 
-        .pulse-wrap {
-            position: relative;
-            width: 26px;
-            height: 26px;
-        }
+        .pulse-wrap { position: relative; width: 26px; height: 26px; }
         .pulse-core {
             position: absolute;
             top: 50%; left: 50%;
@@ -270,7 +230,6 @@
             border-radius: 50%;
             border: 2px solid rgba(255,255,255,0.9);
             z-index: 3;
-            transition: background-color .5s ease;
         }
         .pulse-ring {
             position: absolute;
@@ -291,530 +250,507 @@
             background: rgba(255, 255, 255, 0.97);
             border-radius: 10px;
         }
-        .popup-box { min-width: 220px; text-align: center; font-family: inherit; }
-        .popup-box .zona-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+        .popup-box { min-width: 210px; text-align: center; font-family: inherit; }
+        .popup-box .zona-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+        .popup-red { font-size: 12px; color: #444; margin-bottom: 8px; }
         .popup-stats {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 8px;
-            margin-bottom: 8px;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 6px;
         }
-        .popup-stat {
-            background: #f5f5f5;
-            padding: 6px;
-            border-radius: 4px;
-            font-size: 11px;
-        }
-        .popup-stat-value {
-            font-weight: 700;
-            font-size: 13px;
-            color: #1a4f24;
-        }
-        .popup-stat-label {
-            color: #666;
-            font-size: 9px;
-        }
-        .popup-photo-placeholder {
-            width: 100%;
-            height: 70px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 11px;
-            color: #777;
-            background: repeating-linear-gradient(45deg, #eee, #eee 8px, #f6f6f6 8px, #f6f6f6 16px);
+        .popup-stat { background: #f5f5f5; padding: 6px; border-radius: 4px; font-size: 11px; }
+        .popup-stat-value { font-weight: 700; font-size: 14px; color: #1a4f24; }
+        .popup-stat-label { color: #666; font-size: 9px; }
+        .popup-meta { font-size: 10px; color: #777; }
+
+        @media (max-width: 720px) {
+            h2 { font-size: 18px; }
+            #map-wrap { height: auto; width: 96%; margin: 12px auto; }
+            #map { height: 55vh; }
+            #live-panel {
+                position: static;
+                width: 100%;
+                max-height: none;
+                margin-top: 12px;
+            }
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h2>Diagnóstico de Red Wi-Fi: Universidad de Sucre (Sede Puerta Roja)</h2>
-        <p>Análisis Estadístico - Velocidad de Descarga, Subida y Latencia</p>
+        <h2>Calidad de la Red Wi-Fi: Universidad de Sucre (Sede Puerta Roja)</h2>
+        <p>Mide tu velocidad y mira las mediciones de otras personas en el campus</p>
     </header>
 
     <div id="map-wrap">
         <div id="map"></div>
 
         <div id="live-panel">
-            <h3>📊 Estado de Zonas</h3>
-            <div class="sub"><span class="live-dot"></span>Datos Reales Medidos</div>
-            <div id="zone-rows"></div>
+            <div id="aviso" class="aviso" style="display: none;"></div>
 
-            <div id="graficoComparativo">
-                <canvas id="chartZonas"></canvas>
+            <h3>📡 Medir mi red</h3>
+
+            <div class="campo">
+                <label for="zonaSelect">Zona donde estás</label>
+                <select id="zonaSelect">
+                    <option value="auto">📍 Detectar por mi ubicación</option>
+                </select>
             </div>
 
+            <div class="campo">
+                <label for="redInput">Nombre de la red Wi-Fi</label>
+                <input id="redInput" type="text" list="redes" maxlength="30" autocomplete="off" placeholder="Ej: Unisucre">
+                <datalist id="redes">
+                    <option value="Unisucre"></option>
+                    <option value="Datos móviles"></option>
+                </datalist>
+            </div>
+
+            <button id="measureBtn" class="measure-button">▶ Iniciar medición</button>
+            <div class="barra" id="barra"></div>
+
+            <div id="resultados">
+                <div class="stats-grid">
+                    <div class="stat"><div class="stat-label">Descarga</div><div class="stat-value" id="vDown">--</div><div class="stat-unit">Mbps</div></div>
+                    <div class="stat"><div class="stat-label">Subida</div><div class="stat-value" id="vUp">--</div><div class="stat-unit">Mbps</div></div>
+                    <div class="stat"><div class="stat-label">Ping</div><div class="stat-value" id="vPing">--</div><div class="stat-unit">ms</div></div>
+                    <div class="stat"><div class="stat-label">Jitter</div><div class="stat-value" id="vJitter">--</div><div class="stat-unit">ms</div></div>
+                </div>
+            </div>
+
+            <div id="estado" style="display: none;"></div>
+
             <div class="ranking-section">
-                <h3 style="margin: 0 0 6px 0; font-size: 12px; color: #f1c40f;">🏆 Ranking de Descarga</h3>
+                <h3 style="margin-bottom: 6px;">🏆 Mejores zonas Wi-Fi</h3>
+                <div class="ranking-sub">Promedio de descarga · últimas 24 horas</div>
                 <div id="ranking-list"></div>
             </div>
 
-            <div class="stats-section" id="statsSection">
-                <h3 style="margin: 0 0 6px 0; font-size: 12px; color: #f1c40f;">📈 Estadísticas Generales</h3>
-                <div class="stats-grid" id="stats-grid"></div>
-            </div>
-
-            <div class="geolocation-section">
-                <button class="geo-button" id="geoBtn" onclick="toggleGeolocalización()">📍 Activar Ubicación</button>
-                <div class="geo-info" id="geoInfo">
-                    <div><strong>Lat:</strong> <span id="geoLat">--</span></div>
-                    <div><strong>Lng:</strong> <span id="geoLng">--</span></div>
-                    <div><strong>Precisión:</strong> <span id="geoPrecision">--</span></div>
-                </div>
-            </div>
-
-            <!-- NUEVA SECCIÓN: SPEEDTEST EN TIEMPO REAL -->
-            <div style="border-top: 1px solid rgba(241, 196, 15, 0.2); padding-top: 10px; margin-top: 10px;">
-                <h3 style="margin: 0 0 6px 0; font-size: 12px; color: #f1c40f;">📡 Medición ESP32 en Vivo</h3>
-                
-                <button class="geo-button" id="speedtestBtn" onclick="toggleSpeedtest()" style="background: rgba(46, 204, 113, 0.1); border-color: rgba(46, 204, 113, 0.5); color: #2ecc71;">
-                    ▶ Iniciar Medición
-                </button>
-                
-                <div id="speedtestBox" style="display: none; margin-top: 10px; padding: 12px; background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.3); border-radius: 6px; font-size: 12px;">
-                    <div style="color: #2ecc71; margin-bottom: 8px;"><strong>📊 Datos en Vivo</strong></div>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
-                        <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center;">
-                            <div style="color: #f39c12; font-size: 10px;">Descarga</div>
-                            <div id="speedDown" style="font-weight: 700; color: #2ecc71; font-size: 14px;">-- Mbps</div>
-                        </div>
-                        
-                        <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center;">
-                            <div style="color: #f39c12; font-size: 10px;">Subida</div>
-                            <div id="speedUp" style="font-weight: 700; color: #2ecc71; font-size: 14px;">-- Mbps</div>
-                        </div>
-                    </div>
-                    
-                    <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center;">
-                        <div style="color: #f39c12; font-size: 10px;">Ping</div>
-                        <div id="speedPing" style="font-weight: 700; color: #2ecc71; font-size: 14px;">-- ms</div>
-                    </div>
-                    
-                    <div id="speedStatus" style="margin-top: 8px; padding: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; text-align: center; color: #9db89f; font-size: 10px;">
-                        Esperando datos...
-                    </div>
-                </div>
-            </div>
+            <p class="nota">
+                La medición tarda cerca de 30 a 60 segundos y puede consumir cientos de MB de datos.
+                Al terminar, tu resultado se publica en el mapa de forma anónima, junto con tu ubicación
+                y el nombre de red que indiques. El navegador no permite leer el nombre de la red
+                automáticamente, por eso se escribe a mano.
+            </p>
         </div>
     </div>
 
-    <!-- Scripts de Leaflet y plugin Heatmap -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 
-    <script>
-        var datosReales = {
-            biblioteca: {
-                nombre: "Biblioteca",
-                lat: 9.31479142149925,
-                lng: -75.38830251874937,
-                descarga: 52.18,
-                subida: 41.06,
-                ping: 15.10,
-                min_desc: 44.73,
-                max_desc: 56.37
-            },
-            bloque1: {
-                nombre: "Bloque 1",
-                lat: 9.315606363782312,
-                lng: -75.38727989191376,
-                descarga: 47.34,
-                subida: 35.09,
-                ping: 19.10,
-                min_desc: 40.99,
-                max_desc: 55.53
-            },
-            cafeteria: {
-                nombre: "Cafetería",
-                lat: 9.316013505876915,
-                lng: -75.38663225411734,
-                descarga: 28.24,
-                subida: 21.65,
-                ping: 33.60,
-                min_desc: 23.84,
-                max_desc: 35.13
-            },
-            polideportivo: {
-                nombre: "Polideportivo",
-                lat: 9.316005859151925,
-                lng: -75.38867881751805,
-                descarga: 16.80,
-                subida: 12.49,
-                ping: 57.50,
-                min_desc: 6.50,
-                max_desc: 22.90
-            }
+    <script type="module">
+        // ==========================================================
+        // CONFIGURACIÓN
+        // ==========================================================
+        // Copia aquí la configuración de tu proyecto de Firebase
+        // (Consola de Firebase > Configuración del proyecto > Tus apps > Web).
+        // Mientras tenga los valores de ejemplo, la página funciona en modo local
+        // y las mediciones NO se comparten entre personas.
+        const FIREBASE_CONFIG = {
+            apiKey: "TU_API_KEY",
+            authDomain: "TU_PROYECTO.firebaseapp.com",
+            databaseURL: "https://TU_PROYECTO-default-rtdb.firebaseio.com",
+            projectId: "TU_PROYECTO"
         };
 
-        var zonas = Object.values(datosReales);
+        const FIREBASE_SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
+        const SPEEDTEST_URL = 'https://cdn.jsdelivr.net/npm/@cloudflare/speedtest@1.17.0/dist/speedtest.js';
 
-        var BASE_ZOOM = 18;
-        var map = L.map('map', { zoomSnap: 0.25 }).setView([9.3155, -75.3876], BASE_ZOOM);
+        const VENTANA_MS = 24 * 60 * 60 * 1000;
+        const GPS_MAX_PRECISION_M = 150;
+        const GPS_MAX_DIST_ZONA_M = 500;
 
-        L.tileLayer('https://tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png', {
+        const ZONAS = {
+            biblioteca:    { nombre: 'Biblioteca',    lat: 9.31479142149925,  lng: -75.38830251874937 },
+            bloque1:       { nombre: 'Bloque 1',      lat: 9.315606363782312, lng: -75.38727989191376 },
+            cafeteria:     { nombre: 'Cafetería',     lat: 9.316013505876915, lng: -75.38663225411734 },
+            polideportivo: { nombre: 'Polideportivo', lat: 9.316005859151925, lng: -75.38867881751805 }
+        };
+
+        // ==========================================================
+        // UTILIDADES
+        // ==========================================================
+        function el(tag, clase, texto) {
+            const nodo = document.createElement(tag);
+            if (clase) nodo.className = clase;
+            if (texto !== undefined) nodo.textContent = texto;
+            return nodo;
+        }
+
+        function distanciaM(a, b) {
+            const R = 6371000, rad = Math.PI / 180;
+            const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+            const h = Math.sin(dLat / 2) ** 2 +
+                Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+            return 2 * R * Math.asin(Math.sqrt(h));
+        }
+
+        function colorPorVelocidad(mbps) {
+            if (mbps >= 45) return '#2ecc71';
+            if (mbps >= 30) return '#f39c12';
+            return '#e74c3c';
+        }
+
+        function haceCuanto(ts) {
+            const min = Math.floor((Date.now() - ts) / 60000);
+            if (min < 1) return 'hace menos de 1 min';
+            if (min < 60) return 'hace ' + min + ' min';
+            return 'hace ' + Math.floor(min / 60) + ' h';
+        }
+
+        // ==========================================================
+        // ALMACÉN DE MEDICIONES (Firebase o modo local)
+        // ==========================================================
+        function firebaseConfigurado() {
+            return !FIREBASE_CONFIG.databaseURL.includes('TU_PROYECTO');
+        }
+
+        function crearAlmacenLocal() {
+            const oyentes = [];
+            let n = 0;
+            return {
+                modo: 'local',
+                nuevaClave() { return 'local' + (++n); },
+                async guardar(clave, datos) {
+                    const registro = { ...datos, ts: Date.now() };
+                    oyentes.forEach(f => f(clave, registro));
+                },
+                suscribir(f) { oyentes.push(f); }
+            };
+        }
+
+        async function crearAlmacenFirebase() {
+            const [{ initializeApp }, db] = await Promise.all([
+                import(FIREBASE_SDK + 'firebase-app.js'),
+                import(FIREBASE_SDK + 'firebase-database.js')
+            ]);
+            const bd = db.getDatabase(initializeApp(FIREBASE_CONFIG));
+            const coleccion = db.ref(bd, 'mediciones');
+            return {
+                modo: 'firebase',
+                nuevaClave() { return db.push(coleccion).key; },
+                async guardar(clave, datos) {
+                    await db.set(db.child(coleccion, clave), { ...datos, ts: db.serverTimestamp() });
+                },
+                suscribir(f) {
+                    const consulta = db.query(coleccion, db.orderByChild('ts'), db.startAt(Date.now() - VENTANA_MS));
+                    db.onChildAdded(consulta, snap => f(snap.key, snap.val()));
+                }
+            };
+        }
+
+        const avisoEl = document.getElementById('aviso');
+        function mostrarAviso(texto) {
+            avisoEl.textContent = texto;
+            avisoEl.style.display = 'block';
+        }
+
+        async function crearAlmacen() {
+            if (!firebaseConfigurado()) {
+                mostrarAviso('Modo local: las mediciones no se comparten con otras personas hasta configurar Firebase en index.html.');
+                return crearAlmacenLocal();
+            }
+            try {
+                return await crearAlmacenFirebase();
+            } catch (e) {
+                console.error(e);
+                mostrarAviso('No se pudo conectar con la base de datos. Las mediciones no se compartirán en esta sesión.');
+                return crearAlmacenLocal();
+            }
+        }
+
+        // ==========================================================
+        // MAPA
+        // ==========================================================
+        const map = L.map('map', { zoomSnap: 0.25 }).setView([9.3155, -75.3876], 18);
+
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             maxZoom: 19,
             minZoom: 15
         }).addTo(map);
 
-        var heatLayer;
-
-        function actualizarCalor() {
-            var heatData = zonas.map(z => [z.lat, z.lng, z.descarga / 60]);
-            
-            if (heatLayer) map.removeLayer(heatLayer);
-            
-            var radio = 85 + (BASE_ZOOM - map.getZoom()) * 5;
-            var blur = Math.max(25, 40 - (BASE_ZOOM - map.getZoom()) * 2);
-            
-            heatLayer = L.heatLayer(heatData, {
-                radius: radio,
-                blur: blur,
-                maxZoom: 19,
-                minOpacity: 0.5,
-                gradient: {
-                    0.0: '#0000ff',
-                    0.25: '#00ff00',
-                    0.5: '#ffff00',
-                    0.75: '#ff7f00',
-                    1.0: '#ff0000'
-                }
-            }).addTo(map);
-        }
-
-        var marcadores = {};
-
-        zonas.forEach(function(zona) {
-            var html = '<div class="popup-box">' +
-                '<div class="zona-title">' + zona.nombre + '</div>' +
-                '<div class="popup-stats">' +
-                '  <div class="popup-stat"><div class="popup-stat-value">' + zona.descarga.toFixed(2) + '</div><div class="popup-stat-label">Descarga (Mbps)</div></div>' +
-                '  <div class="popup-stat"><div class="popup-stat-value">' + zona.subida.toFixed(2) + '</div><div class="popup-stat-label">Subida (Mbps)</div></div>' +
-                '  <div class="popup-stat"><div class="popup-stat-value">' + zona.ping.toFixed(1) + '</div><div class="popup-stat-label">Ping (ms)</div></div>' +
-                '</div>' +
-                '<div class="popup-photo-placeholder">Datos reales medidos</div>' +
-                '</div>';
-            
-            var popup = L.popup({ closeButton: false }).setContent(html);
-            
-            var pulseDiv = L.DomUtil.create('div', 'pulse-wrap');
-            var core = L.DomUtil.create('div', 'pulse-core', pulseDiv);
-            var ring = L.DomUtil.create('div', 'pulse-ring', pulseDiv);
-            
-            var customIcon = L.divIcon({
-                html: pulseDiv,
-                iconSize: [26, 26],
-                className: ''
-            });
-            
-            var marker = L.marker([zona.lat, zona.lng], { icon: customIcon })
-                .bindPopup(popup)
-                .addTo(map);
-            
-            var label = L.marker([zona.lat, zona.lng], {
+        Object.values(ZONAS).forEach(z => {
+            L.marker([z.lat, z.lng], {
+                interactive: false,
+                keyboard: false,
                 icon: L.divIcon({
-                    html: '<div class="zone-label">' + zona.nombre + '</div>',
+                    html: '<div class="zone-label"></div>',
                     className: '',
-                    iconSize: [100, 30]
+                    iconSize: [100, 30],
+                    iconAnchor: [50, -6]
                 })
-            }).addTo(map);
-            
-            marcadores[zona.nombre] = { marker: marker, core: core, label: label };
+            }).addTo(map).getElement().firstChild.textContent = z.nombre;
         });
 
-        function actualizarPanel() {
-            var html = '';
-            zonas.forEach(function(zona) {
-                var color;
-                if (zona.descarga >= 45) {
-                    color = '#2ecc71';
-                } else if (zona.descarga >= 30) {
-                    color = '#f39c12';
-                } else {
-                    color = '#e74c3c';
-                }
-                
-                html += '<div class="zone-row">' +
-                    '<div class="zone-header">' +
-                    '<div class="zone-swatch" style="background: ' + color + '; box-shadow: 0 0 5px ' + color + ';"></div>' +
-                    '<div class="zone-name">' + zona.nombre + '</div>' +
-                    '</div>' +
-                    '<div class="zone-metrics">' +
-                    '<div class="metric-item"><span class="metric-value">' + zona.descarga.toFixed(2) + '</span><span class="metric-label">Desc</span></div>' +
-                    '<div class="metric-item"><span class="metric-value">' + zona.subida.toFixed(2) + '</span><span class="metric-label">Subida</span></div>' +
-                    '<div class="metric-item"><span class="metric-value">' + zona.ping.toFixed(1) + '</span><span class="metric-label">Ping</span></div>' +
-                    '</div>' +
-                    '</div>';
-                
-                marcadores[zona.nombre].core.style.backgroundColor = color;
+        const zonaSelect = document.getElementById('zonaSelect');
+        Object.entries(ZONAS).forEach(([clave, z]) => {
+            const op = el('option', '', z.nombre);
+            op.value = clave;
+            zonaSelect.appendChild(op);
+        });
+
+        // ==========================================================
+        // MEDICIONES EN PANTALLA
+        // ==========================================================
+        const mediciones = new Map();
+        const marcadores = new Map();
+        let claveAbrir = null;
+
+        function contenidoPopup(m) {
+            const caja = el('div', 'popup-box');
+            caja.appendChild(el('div', 'zona-title', ZONAS[m.zona].nombre));
+            caja.appendChild(el('div', 'popup-red', '📶 Red: ' + m.red));
+            const grid = el('div', 'popup-stats');
+            [['Descarga (Mbps)', m.descarga.toFixed(2)], ['Subida (Mbps)', m.subida.toFixed(2)],
+             ['Ping (ms)', m.ping.toFixed(1)], ['Jitter (ms)', m.jitter.toFixed(1)]].forEach(([etiqueta, valor]) => {
+                const caja2 = el('div', 'popup-stat');
+                caja2.appendChild(el('div', 'popup-stat-value', valor));
+                caja2.appendChild(el('div', 'popup-stat-label', etiqueta));
+                grid.appendChild(caja2);
             });
-            
-            document.getElementById('zone-rows').innerHTML = html;
+            caja.appendChild(grid);
+            caja.appendChild(el('div', 'popup-meta',
+                haceCuanto(m.ts) + (m.ubic === 'zona' ? ' · ubicación aproximada' : '')));
+            return caja;
         }
 
-        var chartInstance = null;
+        function agregarMedicion(clave, m) {
+            if (mediciones.has(clave) || !ZONAS[m.zona]) return;
+            mediciones.set(clave, m);
 
-        function crearGraficoComparativo() {
-            var ctx = document.getElementById('chartZonas').getContext('2d');
-            
-            chartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: zonas.map(z => z.nombre),
-                    datasets: [
-                        {
-                            label: 'Descarga (Mbps)',
-                            data: zonas.map(z => z.descarga),
-                            backgroundColor: '#2ecc71',
-                            borderColor: '#27ae60',
-                            borderWidth: 1
-                        },
-                        {
-                            label: 'Subida (Mbps)',
-                            data: zonas.map(z => z.subida),
-                            backgroundColor: '#3498db',
-                            borderColor: '#2980b9',
-                            borderWidth: 1
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 60,
-                            ticks: { color: '#9db89f', font: { size: 9 } },
-                            grid: { color: 'rgba(255,255,255,0.05)' }
-                        },
-                        x: {
-                            ticks: { color: '#9db89f', font: { size: 9 } },
-                            grid: { display: false }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            labels: { color: '#9db89f', font: { size: 9 } }
-                        }
-                    }
-                }
-            });
+            const color = colorPorVelocidad(m.descarga);
+            const contenedor = el('div', 'pulse-wrap');
+            const nucleo = el('div', 'pulse-core');
+            const anillo = el('div', 'pulse-ring');
+            nucleo.style.backgroundColor = color;
+            anillo.style.backgroundColor = color;
+            contenedor.append(nucleo, anillo);
+
+            const marcador = L.marker([m.lat, m.lng], {
+                icon: L.divIcon({ html: contenedor, iconSize: [26, 26], className: '' })
+            }).addTo(map);
+            marcador.bindPopup(() => contenidoPopup(m), { closeButton: false });
+            marcadores.set(clave, marcador);
+
+            if (clave === claveAbrir) {
+                map.flyTo([m.lat, m.lng], 18);
+                marcador.openPopup();
+                claveAbrir = null;
+            }
+            actualizarRanking();
         }
 
         function actualizarRanking() {
-            var ranking = zonas.sort((a, b) => b.descarga - a.descarga);
-            var html = '';
-            
-            ranking.forEach(function(zona, index) {
-                var emoji = ['🥇', '🥈', '🥉', '4️⃣'][index];
-                html += '<div class="ranking-item">' +
-                    '<span class="ranking-position">' + emoji + '</span>' +
-                    '<span style="flex:1; margin-left: 8px;">' + zona.nombre + '</span>' +
-                    '<span class="ranking-value">' + zona.descarga.toFixed(2) + ' Mbps</span>' +
-                    '</div>';
+            const desde = Date.now() - VENTANA_MS;
+            const porZona = {};
+            mediciones.forEach(m => {
+                if (m.ts < desde) return;
+                (porZona[m.zona] = porZona[m.zona] || []).push(m);
             });
-            
-            document.getElementById('ranking-list').innerHTML = html;
-        }
+            const promedio = (lista, campo) => lista.reduce((s, m) => s + m[campo], 0) / lista.length;
+            const filas = Object.entries(porZona)
+                .map(([clave, lista]) => ({
+                    nombre: ZONAS[clave].nombre,
+                    n: lista.length,
+                    descarga: promedio(lista, 'descarga'),
+                    subida: promedio(lista, 'subida'),
+                    ping: promedio(lista, 'ping')
+                }))
+                .sort((a, b) => b.descarga - a.descarga);
 
-        function actualizarEstadisticas() {
-            var descargasProm = zonas.map(z => z.descarga);
-            var subidaProm = zonas.map(z => z.subida);
-            var pings = zonas.map(z => z.ping);
-            
-            var promDescarga = (descargasProm.reduce((a, b) => a + b) / descargasProm.length).toFixed(2);
-            var promSubida = (subidaProm.reduce((a, b) => a + b) / subidaProm.length).toFixed(2);
-            var promPing = (pings.reduce((a, b) => a + b) / pings.length).toFixed(2);
-            
-            var html = '<div class="stat-box">' +
-                '<div class="stat-label">Descarga Promedio</div>' +
-                '<div class="stat-value">' + promDescarga + ' Mbps</div>' +
-                '</div>' +
-                '<div class="stat-box">' +
-                '<div class="stat-label">Subida Promedio</div>' +
-                '<div class="stat-value">' + promSubida + ' Mbps</div>' +
-                '</div>' +
-                '<div class="stat-box">' +
-                '<div class="stat-label">Ping Promedio</div>' +
-                '<div class="stat-value">' + promPing + ' ms</div>' +
-                '</div>' +
-                '<div class="stat-box">' +
-                '<div class="stat-label">Mejor Zona</div>' +
-                '<div class="stat-value">' + zonas[0].nombre + '</div>' +
-                '</div>';
-            
-            document.getElementById('stats-grid').innerHTML = html;
-        }
-
-        var userMarker = null;
-        var userCircle = null;
-        var watchId = null;
-        var geoActivo = false;
-
-        function toggleGeolocalización() {
-            if (geoActivo) {
-                detenerGeolocalización();
-            } else {
-                iniciarGeolocalización();
-            }
-        }
-
-        function iniciarGeolocalización() {
-            if (!navigator.geolocation) {
-                alert('Tu navegador no soporta geolocalización');
+            const cont = document.getElementById('ranking-list');
+            cont.replaceChildren();
+            if (!filas.length) {
+                cont.appendChild(el('div', 'ranking-vacio', 'Aún no hay mediciones en las últimas 24 horas. ¡Haz la primera!'));
                 return;
             }
+            const medallas = ['🥇', '🥈', '🥉'];
+            filas.forEach((f, i) => {
+                const fila = el('div', 'ranking-item');
+                fila.style.borderLeftColor = colorPorVelocidad(f.descarga);
+                fila.appendChild(el('span', 'ranking-pos', medallas[i] || String(i + 1)));
+                const nombre = el('span', 'ranking-nombre', f.nombre);
+                nombre.appendChild(el('small', '',
+                    f.n + (f.n === 1 ? ' medición' : ' mediciones') +
+                    ' · ↑ ' + f.subida.toFixed(1) + ' Mbps · ' + f.ping.toFixed(0) + ' ms'));
+                fila.appendChild(nombre);
+                const valor = el('span', 'ranking-valor', f.descarga.toFixed(1) + ' Mbps');
+                valor.style.color = colorPorVelocidad(f.descarga);
+                fila.appendChild(valor);
+                cont.appendChild(fila);
+            });
+        }
 
-            var opciones = {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
+        // ==========================================================
+        // MEDICIÓN DE VELOCIDAD (motor de Cloudflare)
+        // ==========================================================
+        const btn = document.getElementById('measureBtn');
+        const redInput = document.getElementById('redInput');
+        const estadoEl = document.getElementById('estado');
+        const barraEl = document.getElementById('barra');
+        const resultadosEl = document.getElementById('resultados');
+        const vistas = {
+            descarga: document.getElementById('vDown'),
+            subida: document.getElementById('vUp'),
+            ping: document.getElementById('vPing'),
+            jitter: document.getElementById('vJitter')
+        };
+
+        try { redInput.value = localStorage.getItem('redWifi') || 'Unisucre'; }
+        catch (e) { redInput.value = 'Unisucre'; }
+
+        function setEstado(texto, tipo) {
+            estadoEl.textContent = texto;
+            estadoEl.className = tipo || '';
+            estadoEl.style.display = 'block';
+        }
+
+        function mostrarValores(r) {
+            const fmt = (v, d) => (v === null || v === undefined || Number.isNaN(v)) ? '--' : v.toFixed(d);
+            vistas.descarga.textContent = fmt(r.descarga, 1);
+            vistas.subida.textContent = fmt(r.subida, 1);
+            vistas.ping.textContent = fmt(r.ping, 0);
+            vistas.jitter.textContent = fmt(r.jitter, 1);
+        }
+
+        function resumir(s) {
+            const aMbps = bps => (typeof bps === 'number') ? bps / 1e6 : null;
+            return { descarga: aMbps(s.download), subida: aMbps(s.upload), ping: s.latency ?? null, jitter: s.jitter ?? null };
+        }
+
+        function obtenerPosicion() {
+            return new Promise(resolver => {
+                if (!navigator.geolocation) return resolver(null);
+                navigator.geolocation.getCurrentPosition(
+                    p => resolver({ lat: p.coords.latitude, lng: p.coords.longitude, prec: Math.round(p.coords.accuracy) }),
+                    () => resolver(null),
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            });
+        }
+
+        function zonaMasCercana(pos) {
+            let mejor = null;
+            Object.entries(ZONAS).forEach(([clave, z]) => {
+                const d = distanciaM(pos, z);
+                if (!mejor || d < mejor.dist) mejor = { clave, dist: d };
+            });
+            return mejor;
+        }
+
+        function resolverUbicacion(pos, zona) {
+            const z = ZONAS[zona];
+            if (pos && pos.prec <= GPS_MAX_PRECISION_M && distanciaM(pos, z) <= GPS_MAX_DIST_ZONA_M) {
+                return { lat: pos.lat, lng: pos.lng, prec: pos.prec, ubic: 'gps' };
+            }
+            return {
+                lat: z.lat + (Math.random() - 0.5) * 0.00027,
+                lng: z.lng + (Math.random() - 0.5) * 0.00027,
+                ubic: 'zona'
             };
-
-            watchId = navigator.geolocation.watchPosition(
-                mostrarUbicacion,
-                manejarError,
-                opciones
-            );
-
-            geoActivo = true;
-            document.getElementById('geoBtn').textContent = '⏹ Detener Ubicación';
-            document.getElementById('geoBtn').classList.add('active');
-            document.getElementById('geoInfo').style.display = 'block';
         }
 
-        function detenerGeolocalización() {
-            if (watchId) {
-                navigator.geolocation.clearWatch(watchId);
-                watchId = null;
-            }
-
-            if (userMarker) {
-                map.removeLayer(userMarker);
-                userMarker = null;
-            }
-
-            if (userCircle) {
-                map.removeLayer(userCircle);
-                userCircle = null;
-            }
-
-            geoActivo = false;
-            document.getElementById('geoBtn').textContent = '📍 Activar Ubicación';
-            document.getElementById('geoBtn').classList.remove('active');
-            document.getElementById('geoInfo').style.display = 'none';
+        async function ejecutarTest(alCambiar) {
+            const { default: SpeedTest } = await import(SPEEDTEST_URL);
+            return new Promise(resolver => {
+                const test = new SpeedTest({ autoStart: false, abortTestDuration: 120000 });
+                test.onResultsChange = ({ type }) => alCambiar(type, resumir(test.results.getSummary()));
+                test.onFinish = resultados => resolver(resumir(resultados.getSummary()));
+                test.onError = (error, status) => console.warn('Speedtest:', error, status);
+                test.play();
+            });
         }
 
-        function mostrarUbicacion(posicion) {
-            var lat = posicion.coords.latitude;
-            var lng = posicion.coords.longitude;
-            var precision = Math.round(posicion.coords.accuracy);
+        const FASES = {
+            latency: '⏱ Midiendo latencia…',
+            download: '⬇ Midiendo descarga…',
+            upload: '⬆ Midiendo subida…'
+        };
 
-            document.getElementById('geoLat').textContent = lat.toFixed(6);
-            document.getElementById('geoLng').textContent = lng.toFixed(6);
-            document.getElementById('geoPrecision').textContent = precision + ' m';
+        let midiendo = false;
 
-            if (!userMarker) {
-                map.setView([lat, lng], 19);
+        async function medir() {
+            if (midiendo) return;
+            const red = redInput.value.trim().slice(0, 30);
+            if (!red) {
+                setEstado('Escribe el nombre de la red Wi-Fi a la que estás conectado.', 'error');
+                return;
             }
+            try { localStorage.setItem('redWifi', red); } catch (e) { /* sin almacenamiento local */ }
 
-            if (userMarker) {
-                userMarker.setLatLng([lat, lng]);
-            } else {
-                var miIcono = L.divIcon({
-                    html: '<div style="background: #2196F3; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>',
-                    iconSize: [26, 26],
-                    className: ''
-                });
-                
-                userMarker = L.marker([lat, lng], { icon: miIcono })
-                    .bindPopup('📍 Tu Ubicación Actual')
-                    .addTo(map);
-            }
-
-            if (userCircle) {
-                userCircle.setLatLng([lat, lng]).setRadius(precision);
-            } else {
-                userCircle = L.circle([lat, lng], {
-                    radius: precision,
-                    color: '#2196F3',
-                    fillColor: '#2196F3',
-                    fillOpacity: 0.15,
-                    weight: 2,
-                    dashArray: '5, 5'
-                }).addTo(map);
-            }
-        }
-
-        function manejarError(error) {
-            console.log('Error: Geolocalización no disponible');
-            detenerGeolocalización();
-        }
-
-        var ws = null;
-        var midiendo = false;
-
-        function toggleSpeedtest() {
-            if (midiendo) {
-                detenerSpeedtest();
-            } else {
-                iniciarSpeedtest();
-            }
-        }
-
-        function iniciarSpeedtest() {
             midiendo = true;
-            document.getElementById('speedtestBtn').textContent = '⏹ Detener Medición';
-            document.getElementById('speedtestBox').style.display = 'block';
-            document.getElementById('speedStatus').textContent = '🔄 Conectando...';
-            
-            ws = new WebSocket('wss://mapa-wifi-backend.onrender.com');
-            
-            ws.onopen = () => {
-                console.log('✓ WebSocket conectado');
-                document.getElementById('speedStatus').textContent = '✓ Conectado - Esperando mediciones...';
-            };
-            
-            ws.onmessage = (event) => {
-                const mensaje = JSON.parse(event.data);
-                if (mensaje.tipo === 'medicion') {
-                    actualizarSpeedtest(mensaje.datos);
+            btn.disabled = zonaSelect.disabled = redInput.disabled = true;
+            resultadosEl.style.display = 'none';
+            mostrarValores({});
+
+            try {
+                setEstado('📍 Obteniendo tu ubicación…');
+                const pos = await obtenerPosicion();
+
+                let zona = zonaSelect.value;
+                if (zona === 'auto') {
+                    if (!pos) throw new Error('No se pudo obtener tu ubicación. Elige tu zona en la lista.');
+                    const cercana = zonaMasCercana(pos);
+                    if (cercana.dist > GPS_MAX_DIST_ZONA_M) {
+                        throw new Error('Tu ubicación está fuera de las zonas del campus. Elige una zona en la lista.');
+                    }
+                    zona = cercana.clave;
                 }
-            };
-            
-            ws.onerror = () => {
-                document.getElementById('speedStatus').textContent = '❌ Error de conexión';
-            };
+
+                barraEl.classList.add('activa');
+                resultadosEl.style.display = 'block';
+                setEstado('Zona: ' + ZONAS[zona].nombre + ' · ' + FASES.latency);
+
+                const final = await ejecutarTest((tipo, parcial) => {
+                    mostrarValores(parcial);
+                    setEstado('Zona: ' + ZONAS[zona].nombre + ' · ' + (FASES[tipo] || 'Midiendo…'));
+                });
+
+                if (!(final.descarga > 0) || !(final.subida > 0) || final.ping === null) {
+                    throw new Error('No se pudo completar la medición. Revisa tu conexión e inténtalo de nuevo.');
+                }
+                mostrarValores(final);
+
+                const medicion = {
+                    ...resolverUbicacion(pos, zona),
+                    zona,
+                    red,
+                    descarga: Math.round(final.descarga * 100) / 100,
+                    subida: Math.round(final.subida * 100) / 100,
+                    ping: Math.round(final.ping * 10) / 10,
+                    jitter: Math.round((final.jitter ?? 0) * 10) / 10
+                };
+
+                const clave = almacen.nuevaClave();
+                claveAbrir = clave;
+                try {
+                    await almacen.guardar(clave, medicion);
+                    setEstado('✅ Medición publicada en el mapa.', 'ok');
+                } catch (e) {
+                    console.error(e);
+                    claveAbrir = null;
+                    setEstado('Medición completada, pero no se pudo publicar en el mapa.', 'error');
+                }
+            } catch (e) {
+                console.error(e);
+                setEstado(e.message, 'error');
+            } finally {
+                barraEl.classList.remove('activa');
+                btn.disabled = zonaSelect.disabled = redInput.disabled = false;
+                midiendo = false;
+            }
         }
 
-        function detenerSpeedtest() {
-            midiendo = false;
-            if (ws) ws.close();
-            document.getElementById('speedtestBtn').textContent = '▶ Iniciar Medición';
-            document.getElementById('speedStatus').textContent = 'Medición detenida';
-        }
+        btn.addEventListener('click', medir);
 
-        function actualizarSpeedtest(datos) {
-            const descargaMbps = (datos.velocidad_kbps / 1024).toFixed(2);
-            const subidaMbps = (datos.upload_kbps / 1024).toFixed(2);
-            
-            document.getElementById('speedDown').textContent = descargaMbps + ' Mbps';
-            document.getElementById('speedUp').textContent = subidaMbps + ' Mbps';
-            document.getElementById('speedPing').textContent = datos.ping + ' ms';
-            document.getElementById('speedStatus').textContent = '✓ Última actualización: ' + new Date().toLocaleTimeString();
-        }
-
-        map.on('zoom', actualizarCalor);
-        
-        actualizarCalor();
-        actualizarPanel();
-        crearGraficoComparativo();
+        // ==========================================================
+        // INICIO
+        // ==========================================================
+        const almacen = await crearAlmacen();
+        almacen.suscribir(agregarMedicion);
         actualizarRanking();
-        actualizarEstadisticas();
     </script>
 </body>
 </html>
