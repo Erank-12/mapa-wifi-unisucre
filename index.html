@@ -343,21 +343,18 @@
         // ==========================================================
         // CONFIGURACIÓN
         // ==========================================================
-        // Copia aquí la configuración de tu proyecto de Firebase
-        // (Consola de Firebase > Configuración del proyecto > Tus apps > Web).
-        // Mientras tenga los valores de ejemplo, la página funciona en modo local
+        // Pega aquí los datos de tu proyecto de Supabase
+        // (Supabase > Project Settings > API: "Project URL" y la clave pública
+        // "anon public" o "Publishable key").
+        // Mientras tengan los valores de ejemplo, la página funciona en modo local
         // y las mediciones NO se comparten entre personas.
-        const FIREBASE_CONFIG = {
-            apiKey: "TU_API_KEY",
-            authDomain: "TU_PROYECTO.firebaseapp.com",
-            databaseURL: "https://TU_PROYECTO-default-rtdb.firebaseio.com",
-            projectId: "TU_PROYECTO"
-        };
+        const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
+        const SUPABASE_KEY = "TU_CLAVE_PUBLICA";
 
-        const FIREBASE_SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
         const SPEEDTEST_URL = 'https://cdn.jsdelivr.net/npm/@cloudflare/speedtest@1.17.0/dist/speedtest.js';
 
         const VENTANA_MS = 24 * 60 * 60 * 1000;
+        const CONSULTA_CADA_MS = 5000;
         const GPS_MAX_PRECISION_M = 150;
         const GPS_MAX_DIST_ZONA_M = 500;
 
@@ -400,44 +397,10 @@
         }
 
         // ==========================================================
-        // ALMACÉN DE MEDICIONES (Firebase o modo local)
+        // ALMACÉN DE MEDICIONES (Supabase o modo local)
         // ==========================================================
-        function firebaseConfigurado() {
-            return !FIREBASE_CONFIG.databaseURL.includes('TU_PROYECTO');
-        }
-
-        function crearAlmacenLocal() {
-            const oyentes = [];
-            let n = 0;
-            return {
-                modo: 'local',
-                nuevaClave() { return 'local' + (++n); },
-                async guardar(clave, datos) {
-                    const registro = { ...datos, ts: Date.now() };
-                    oyentes.forEach(f => f(clave, registro));
-                },
-                suscribir(f) { oyentes.push(f); }
-            };
-        }
-
-        async function crearAlmacenFirebase() {
-            const [{ initializeApp }, db] = await Promise.all([
-                import(FIREBASE_SDK + 'firebase-app.js'),
-                import(FIREBASE_SDK + 'firebase-database.js')
-            ]);
-            const bd = db.getDatabase(initializeApp(FIREBASE_CONFIG));
-            const coleccion = db.ref(bd, 'mediciones');
-            return {
-                modo: 'firebase',
-                nuevaClave() { return db.push(coleccion).key; },
-                async guardar(clave, datos) {
-                    await db.set(db.child(coleccion, clave), { ...datos, ts: db.serverTimestamp() });
-                },
-                suscribir(f) {
-                    const consulta = db.query(coleccion, db.orderByChild('ts'), db.startAt(Date.now() - VENTANA_MS));
-                    db.onChildAdded(consulta, snap => f(snap.key, snap.val()));
-                }
-            };
+        function supabaseConfigurado() {
+            return !SUPABASE_URL.includes('TU_PROYECTO') && !SUPABASE_KEY.includes('TU_CLAVE');
         }
 
         const avisoEl = document.getElementById('aviso');
@@ -445,19 +408,90 @@
             avisoEl.textContent = texto;
             avisoEl.style.display = 'block';
         }
+        function ocultarAviso() { avisoEl.style.display = 'none'; }
 
-        async function crearAlmacen() {
-            if (!firebaseConfigurado()) {
-                mostrarAviso('Modo local: las mediciones no se comparten con otras personas hasta configurar Firebase en index.html.');
+        // Cada almacén ofrece: suscribir(f) y guardar(datos).
+        // f(clave, registro, propia) se llama por cada medición, incluida la que acaba de guardar.
+        function crearAlmacenLocal() {
+            const oyentes = [];
+            let n = 0;
+            return {
+                suscribir(f) { oyentes.push(f); },
+                async guardar(datos) {
+                    const clave = 'local' + (++n);
+                    oyentes.forEach(f => f(clave, { ...datos, ts: Date.now() }, true));
+                    return clave;
+                }
+            };
+        }
+
+        function crearAlmacenSupabase() {
+            const tabla = SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/mediciones';
+            const cabeceras = { apikey: SUPABASE_KEY };
+            if (SUPABASE_KEY.startsWith('eyJ')) cabeceras.Authorization = 'Bearer ' + SUPABASE_KEY;
+
+            const oyentes = [];
+            let desdeMs = Date.now() - VENTANA_MS;
+            let fallos = 0;
+
+            const aRegistro = r => ({
+                ts: Date.parse(r.ts), lat: r.lat, lng: r.lng, prec: r.prec ?? undefined, ubic: r.ubic,
+                zona: r.zona, red: r.red, descarga: r.descarga, subida: r.subida, ping: r.ping, jitter: r.jitter
+            });
+            const emitir = (fila, propia) => oyentes.forEach(f => f(String(fila.id), aRegistro(fila), propia));
+
+            // Se pide con 60 s de traslape y los repetidos se descartan por id,
+            // para no perder mediciones que otra persona guarda casi al mismo tiempo.
+            async function consultar() {
+                const desde = new Date(desdeMs - 60000).toISOString();
+                const resp = await fetch(tabla + '?select=*&order=ts.asc&limit=1000&ts=gte.' + encodeURIComponent(desde), { headers: cabeceras });
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const filas = await resp.json();
+                filas.forEach(fila => {
+                    desdeMs = Math.max(desdeMs, Date.parse(fila.ts));
+                    emitir(fila, false);
+                });
+            }
+
+            async function ciclo() {
+                if (document.visibilityState !== 'hidden') {
+                    try {
+                        await consultar();
+                        if (fallos >= 2) ocultarAviso();
+                        fallos = 0;
+                    } catch (e) {
+                        console.warn('No se pudo consultar las mediciones:', e);
+                        if (++fallos === 2) mostrarAviso('No se pudo actualizar el mapa con las mediciones de otras personas. Reintentando…');
+                    }
+                }
+                setTimeout(ciclo, CONSULTA_CADA_MS);
+            }
+
+            return {
+                suscribir(f) {
+                    oyentes.push(f);
+                    if (oyentes.length === 1) ciclo();
+                },
+                async guardar(datos) {
+                    const resp = await fetch(tabla, {
+                        method: 'POST',
+                        headers: { ...cabeceras, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+                        body: JSON.stringify(datos)
+                    });
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status + ' ' + await resp.text());
+                    const [fila] = await resp.json();
+                    emitir(fila, true);
+                    return String(fila.id);
+                }
+            };
+        }
+
+        function crearAlmacen() {
+            if (!supabaseConfigurado()) {
+                mostrarAviso('Modo local: las mediciones no se comparten con otras personas hasta configurar Supabase en index.html.');
                 return crearAlmacenLocal();
             }
-            try {
-                return await crearAlmacenFirebase();
-            } catch (e) {
-                console.error(e);
-                mostrarAviso('No se pudo conectar con la base de datos. Las mediciones no se compartirán en esta sesión.');
-                return crearAlmacenLocal();
-            }
+            return crearAlmacenSupabase();
         }
 
         // ==========================================================
@@ -496,7 +530,6 @@
         // ==========================================================
         const mediciones = new Map();
         const marcadores = new Map();
-        let claveAbrir = null;
 
         function contenidoPopup(m) {
             const caja = el('div', 'popup-box');
@@ -516,30 +549,32 @@
             return caja;
         }
 
-        function agregarMedicion(clave, m) {
-            if (mediciones.has(clave) || !ZONAS[m.zona]) return;
-            mediciones.set(clave, m);
+        function agregarMedicion(clave, m, propia) {
+            if (!ZONAS[m.zona]) return;
 
-            const color = colorPorVelocidad(m.descarga);
-            const contenedor = el('div', 'pulse-wrap');
-            const nucleo = el('div', 'pulse-core');
-            const anillo = el('div', 'pulse-ring');
-            nucleo.style.backgroundColor = color;
-            anillo.style.backgroundColor = color;
-            contenedor.append(nucleo, anillo);
+            if (!mediciones.has(clave)) {
+                mediciones.set(clave, m);
 
-            const marcador = L.marker([m.lat, m.lng], {
-                icon: L.divIcon({ html: contenedor, iconSize: [26, 26], className: '' })
-            }).addTo(map);
-            marcador.bindPopup(() => contenidoPopup(m), { closeButton: false });
-            marcadores.set(clave, marcador);
+                const color = colorPorVelocidad(m.descarga);
+                const contenedor = el('div', 'pulse-wrap');
+                const nucleo = el('div', 'pulse-core');
+                const anillo = el('div', 'pulse-ring');
+                nucleo.style.backgroundColor = color;
+                anillo.style.backgroundColor = color;
+                contenedor.append(nucleo, anillo);
 
-            if (clave === claveAbrir) {
-                map.flyTo([m.lat, m.lng], 18);
-                marcador.openPopup();
-                claveAbrir = null;
+                const marcador = L.marker([m.lat, m.lng], {
+                    icon: L.divIcon({ html: contenedor, iconSize: [26, 26], className: '' })
+                }).addTo(map);
+                marcador.bindPopup(() => contenidoPopup(m), { closeButton: false });
+                marcadores.set(clave, marcador);
+                actualizarRanking();
             }
-            actualizarRanking();
+
+            if (propia) {
+                map.flyTo([m.lat, m.lng], 18);
+                marcadores.get(clave).openPopup();
+            }
         }
 
         function actualizarRanking() {
@@ -723,14 +758,11 @@
                     jitter: Math.round((final.jitter ?? 0) * 10) / 10
                 };
 
-                const clave = almacen.nuevaClave();
-                claveAbrir = clave;
                 try {
-                    await almacen.guardar(clave, medicion);
+                    await almacen.guardar(medicion);
                     setEstado('✅ Medición publicada en el mapa.', 'ok');
                 } catch (e) {
                     console.error(e);
-                    claveAbrir = null;
                     setEstado('Medición completada, pero no se pudo publicar en el mapa.', 'error');
                 }
             } catch (e) {
@@ -748,7 +780,7 @@
         // ==========================================================
         // INICIO
         // ==========================================================
-        const almacen = await crearAlmacen();
+        const almacen = crearAlmacen();
         almacen.suscribir(agregarMedicion);
         actualizarRanking();
     </script>
