@@ -95,6 +95,18 @@
         }
         .campo select:disabled, .campo input:disabled { opacity: 0.5; }
 
+        .consentimiento {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin: 10px 0 4px 0;
+            font-size: 10.5px;
+            line-height: 1.4;
+            color: #b8c9ba;
+            cursor: pointer;
+        }
+        .consentimiento input { margin-top: 2px; flex-shrink: 0; }
+
         .measure-button {
             width: 100%;
             padding: 12px;
@@ -131,12 +143,12 @@
         }
         .stats-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr;
             gap: 8px;
         }
         .stat {
             background: rgba(0,0,0,0.3);
-            padding: 8px;
+            padding: 8px 4px;
             border-radius: 4px;
             text-align: center;
         }
@@ -179,7 +191,7 @@
         }
 
         .nota {
-            margin-top: 8px;
+            margin: 6px 0 0 0;
             font-size: 10px;
             line-height: 1.4;
             color: #8a9a8c;
@@ -190,23 +202,20 @@
             padding-top: 10px;
             margin-top: 12px;
         }
-        .ranking-sub { font-size: 10px; color: #9db89f; margin: -4px 0 8px 0; }
         .ranking-item {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 7px 8px;
-            font-size: 12px;
+            justify-content: space-between;
+            padding: 6px;
+            font-size: 11px;
             margin: 4px 0;
             background: rgba(255,255,255,0.05);
             border-radius: 4px;
-            border-left: 3px solid #f1c40f;
         }
-        .ranking-pos { width: 22px; text-align: center; font-weight: 700; color: #f1c40f; }
-        .ranking-nombre { flex: 1; }
-        .ranking-nombre small { display: block; color: #9db89f; font-size: 10px; }
-        .ranking-valor { font-weight: 700; }
-        .ranking-vacio { font-size: 11px; color: #9db89f; padding: 6px 2px; }
+        .ranking-position { font-weight: 700; color: #f1c40f; width: 20px; }
+        .ranking-nombre { flex: 1; margin-left: 8px; }
+        .ranking-value { font-weight: 600; color: #2ecc71; }
+        .ranking-vacio { font-size: 11px; color: #9db89f; padding: 4px 2px; }
 
         .zone-label {
             background: rgba(15, 18, 15, 0.82) !important;
@@ -250,16 +259,15 @@
             background: rgba(255, 255, 255, 0.97);
             border-radius: 10px;
         }
-        .popup-box { min-width: 210px; text-align: center; font-family: inherit; }
-        .popup-box .zona-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
-        .popup-red { font-size: 12px; color: #444; margin-bottom: 8px; }
+        .popup-box { min-width: 230px; text-align: center; font-family: inherit; }
+        .popup-box .zona-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
         .popup-stats {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr;
             gap: 6px;
             margin-bottom: 6px;
         }
-        .popup-stat { background: #f5f5f5; padding: 6px; border-radius: 4px; font-size: 11px; }
+        .popup-stat { background: #f5f5f5; padding: 6px 2px; border-radius: 4px; font-size: 11px; }
         .popup-stat-value { font-weight: 700; font-size: 14px; color: #1a4f24; }
         .popup-stat-label { color: #666; font-size: 9px; }
         .popup-meta { font-size: 10px; color: #777; }
@@ -308,6 +316,11 @@
                 </datalist>
             </div>
 
+            <label class="consentimiento">
+                <input type="checkbox" id="aceptoMlab">
+                <span>Acepto que M-Lab (el motor del test de velocidad de Google) guarde y publique el resultado junto con mi dirección IP.</span>
+            </label>
+
             <button id="measureBtn" class="measure-button">▶ Iniciar medición</button>
             <div class="barra" id="barra"></div>
 
@@ -316,24 +329,16 @@
                     <div class="stat"><div class="stat-label">Descarga</div><div class="stat-value" id="vDown">--</div><div class="stat-unit">Mbps</div></div>
                     <div class="stat"><div class="stat-label">Subida</div><div class="stat-value" id="vUp">--</div><div class="stat-unit">Mbps</div></div>
                     <div class="stat"><div class="stat-label">Ping</div><div class="stat-value" id="vPing">--</div><div class="stat-unit">ms</div></div>
-                    <div class="stat"><div class="stat-label">Jitter</div><div class="stat-value" id="vJitter">--</div><div class="stat-unit">ms</div></div>
                 </div>
             </div>
 
             <div id="estado" style="display: none;"></div>
+            <p class="nota">Tu medición se publica en el mapa con tu ubicación y el nombre de red que escribas.</p>
 
             <div class="ranking-section">
-                <h3 style="margin-bottom: 6px;">🏆 Mejores zonas Wi-Fi</h3>
-                <div class="ranking-sub">Promedio de descarga · últimas 24 horas</div>
+                <h3 style="margin-bottom: 6px;">🏆 Ranking de Descarga</h3>
                 <div id="ranking-list"></div>
             </div>
-
-            <p class="nota">
-                La medición tarda cerca de 30 a 60 segundos y puede consumir cientos de MB de datos.
-                Al terminar, tu resultado se publica en el mapa de forma anónima, junto con tu ubicación
-                y el nombre de red que indiques. El navegador no permite leer el nombre de la red
-                automáticamente, por eso se escribe a mano.
-            </p>
         </div>
     </div>
 
@@ -343,15 +348,14 @@
         // ==========================================================
         // CONFIGURACIÓN
         // ==========================================================
-        // Pega aquí los datos de tu proyecto de Supabase
-        // (Supabase > Project Settings > API: "Project URL" y la clave pública
-        // "anon public" o "Publishable key").
+        // Datos del proyecto de Supabase (Project Settings > API).
         // Mientras tengan los valores de ejemplo, la página funciona en modo local
         // y las mediciones NO se comparten entre personas.
         const SUPABASE_URL = "https://yrpghyzxnhheqjwbviaf.supabase.co";
         const SUPABASE_KEY = "sb_publishable_34vsM0N4YzMzRsycvJjp5g_Miwy3Nfa";
 
-        const SPEEDTEST_URL = 'https://cdn.jsdelivr.net/npm/@cloudflare/speedtest@1.17.0/dist/speedtest.js';
+        // Cliente oficial de M-Lab (el motor del test de velocidad de Google).
+        const NDT7_BASE = 'https://cdn.jsdelivr.net/npm/@m-lab/ndt7@0.1.5/src/';
 
         const VENTANA_MS = 24 * 60 * 60 * 1000;
         const CONSULTA_CADA_MS = 5000;
@@ -436,7 +440,7 @@
 
             const aRegistro = r => ({
                 ts: Date.parse(r.ts), lat: r.lat, lng: r.lng, prec: r.prec ?? undefined, ubic: r.ubic,
-                zona: r.zona, red: r.red, descarga: r.descarga, subida: r.subida, ping: r.ping, jitter: r.jitter
+                zona: r.zona, red: r.red, descarga: r.descarga, subida: r.subida, ping: r.ping
             });
             const emitir = (fila, propia) => oyentes.forEach(f => f(String(fila.id), aRegistro(fila), propia));
 
@@ -536,7 +540,7 @@
             caja.appendChild(el('div', 'zona-title', '📶 ' + m.red));
             const grid = el('div', 'popup-stats');
             [['Descarga (Mbps)', m.descarga.toFixed(2)], ['Subida (Mbps)', m.subida.toFixed(2)],
-             ['Ping (ms)', m.ping.toFixed(1)], ['Jitter (ms)', m.jitter.toFixed(1)]].forEach(([etiqueta, valor]) => {
+             ['Ping (ms)', m.ping.toFixed(1)]].forEach(([etiqueta, valor]) => {
                 const caja2 = el('div', 'popup-stat');
                 caja2.appendChild(el('div', 'popup-stat-value', valor));
                 caja2.appendChild(el('div', 'popup-stat-label', etiqueta));
@@ -583,57 +587,51 @@
                 if (m.ts < desde) return;
                 (porZona[m.zona] = porZona[m.zona] || []).push(m);
             });
-            const promedio = (lista, campo) => lista.reduce((s, m) => s + m[campo], 0) / lista.length;
             const filas = Object.entries(porZona)
                 .map(([clave, lista]) => ({
                     nombre: ZONAS[clave].nombre,
-                    n: lista.length,
-                    descarga: promedio(lista, 'descarga'),
-                    subida: promedio(lista, 'subida'),
-                    ping: promedio(lista, 'ping')
+                    descarga: lista.reduce((s, m) => s + m.descarga, 0) / lista.length
                 }))
                 .sort((a, b) => b.descarga - a.descarga);
 
             const cont = document.getElementById('ranking-list');
             cont.replaceChildren();
             if (!filas.length) {
-                cont.appendChild(el('div', 'ranking-vacio', 'Aún no hay mediciones en las últimas 24 horas. ¡Haz la primera!'));
+                cont.appendChild(el('div', 'ranking-vacio', 'Aún no hay mediciones.'));
                 return;
             }
-            const medallas = ['🥇', '🥈', '🥉'];
+            const medallas = ['🥇', '🥈', '🥉', '4️⃣'];
             filas.forEach((f, i) => {
                 const fila = el('div', 'ranking-item');
-                fila.style.borderLeftColor = colorPorVelocidad(f.descarga);
-                fila.appendChild(el('span', 'ranking-pos', medallas[i] || String(i + 1)));
-                const nombre = el('span', 'ranking-nombre', f.nombre);
-                nombre.appendChild(el('small', '',
-                    f.n + (f.n === 1 ? ' medición' : ' mediciones') +
-                    ' · ↑ ' + f.subida.toFixed(1) + ' Mbps · ' + f.ping.toFixed(0) + ' ms'));
-                fila.appendChild(nombre);
-                const valor = el('span', 'ranking-valor', f.descarga.toFixed(1) + ' Mbps');
-                valor.style.color = colorPorVelocidad(f.descarga);
-                fila.appendChild(valor);
+                fila.appendChild(el('span', 'ranking-position', medallas[i] || String(i + 1)));
+                fila.appendChild(el('span', 'ranking-nombre', f.nombre));
+                fila.appendChild(el('span', 'ranking-value', f.descarga.toFixed(2) + ' Mbps'));
                 cont.appendChild(fila);
             });
         }
 
         // ==========================================================
-        // MEDICIÓN DE VELOCIDAD (motor de Cloudflare)
+        // MEDICIÓN DE VELOCIDAD (M-Lab NDT7, el motor del test de Google)
         // ==========================================================
         const btn = document.getElementById('measureBtn');
         const redInput = document.getElementById('redInput');
+        const aceptoEl = document.getElementById('aceptoMlab');
         const estadoEl = document.getElementById('estado');
         const barraEl = document.getElementById('barra');
         const resultadosEl = document.getElementById('resultados');
         const vistas = {
             descarga: document.getElementById('vDown'),
             subida: document.getElementById('vUp'),
-            ping: document.getElementById('vPing'),
-            jitter: document.getElementById('vJitter')
+            ping: document.getElementById('vPing')
         };
 
-        try { redInput.value = localStorage.getItem('redWifi') || 'Unisucre'; }
-        catch (e) { redInput.value = 'Unisucre'; }
+        try {
+            redInput.value = localStorage.getItem('redWifi') || 'Unisucre';
+            aceptoEl.checked = localStorage.getItem('aceptoMlab') === '1';
+        } catch (e) { redInput.value = 'Unisucre'; }
+        aceptoEl.addEventListener('change', () => {
+            try { localStorage.setItem('aceptoMlab', aceptoEl.checked ? '1' : '0'); } catch (e) { /* sin almacenamiento local */ }
+        });
 
         function setEstado(texto, tipo) {
             estadoEl.textContent = texto;
@@ -642,16 +640,10 @@
         }
 
         function mostrarValores(r) {
-            const fmt = (v, d) => (v === null || v === undefined || Number.isNaN(v)) ? '--' : v.toFixed(d);
+            const fmt = (v, d) => (typeof v === 'number' && !Number.isNaN(v)) ? v.toFixed(d) : '--';
             vistas.descarga.textContent = fmt(r.descarga, 1);
             vistas.subida.textContent = fmt(r.subida, 1);
             vistas.ping.textContent = fmt(r.ping, 0);
-            vistas.jitter.textContent = fmt(r.jitter, 1);
-        }
-
-        function resumir(s) {
-            const aMbps = bps => (typeof bps === 'number') ? bps / 1e6 : null;
-            return { descarga: aMbps(s.download), subida: aMbps(s.upload), ping: s.latency ?? null, jitter: s.jitter ?? null };
         }
 
         function obtenerPosicion() {
@@ -686,22 +678,88 @@
             };
         }
 
-        async function ejecutarTest(alCambiar) {
-            const { default: SpeedTest } = await import(SPEEDTEST_URL);
-            return new Promise(resolver => {
-                const test = new SpeedTest({ autoStart: false, abortTestDuration: 120000 });
-                test.onResultsChange = ({ type }) => alCambiar(type, resumir(test.results.getSummary()));
-                test.onFinish = resultados => resolver(resumir(resultados.getSummary()));
-                test.onError = (error, status) => console.warn('Speedtest:', error, status);
-                test.play();
+        function cargarNdt7() {
+            return new Promise((resolver, rechazar) => {
+                if (window.ndt7) return resolver();
+                const script = document.createElement('script');
+                script.src = NDT7_BASE + 'ndt7.js';
+                script.onload = () => resolver();
+                script.onerror = () => rechazar(new Error('No se pudo cargar el motor de medición. Revisa tu conexión.'));
+                document.head.appendChild(script);
             });
         }
 
+        // Los "workers" de ndt7 deben cargarse desde nuestro propio dominio;
+        // este envoltorio los importa desde el CDN sin tener que subir archivos.
+        function urlDeWorker(archivo) {
+            const codigo = 'importScripts(' + JSON.stringify(NDT7_BASE + archivo) + ');';
+            return URL.createObjectURL(new Blob([codigo], { type: 'text/javascript' }));
+        }
+
+        // Descarga: promedio del cliente durante los 10 s de la prueba (igual que el test de Google).
+        // Subida: bytes que el servidor confirma haber recibido (bytes por µs × 8 = Mbps).
+        // Ping: RTT mínimo medido por el servidor.
+        async function ejecutarTest(alCambiar) {
+            await cargarNdt7();
+            const r = { descarga: null, subida: null, ping: null };
+            let falla = null;
+            const subidaServidor = d => (d && d.TCPInfo && d.TCPInfo.ElapsedTime > 0)
+                ? d.TCPInfo.BytesReceived * 8 / d.TCPInfo.ElapsedTime : null;
+            const pingServidor = d => (d && d.TCPInfo && d.TCPInfo.MinRTT > 0) ? d.TCPInfo.MinRTT / 1000 : null;
+
+            const urlDescarga = urlDeWorker('ndt7-download-worker.js');
+            const urlSubida = urlDeWorker('ndt7-upload-worker.js');
+            try {
+                await ndt7.test({
+                    userAcceptedDataPolicy: true,
+                    downloadworkerfile: urlDescarga,
+                    uploadworkerfile: urlSubida,
+                    metadata: { client_name: 'mapa-wifi-unisucre' }
+                }, {
+                    error: mensaje => { falla = falla || String(mensaje); console.warn('NDT7:', mensaje); },
+                    serverChosen: () => alCambiar('download', r),
+                    downloadStart: () => alCambiar('download', r),
+                    downloadMeasurement: ({ Source, Data }) => {
+                        if (Source === 'client') r.descarga = Data.MeanClientMbps;
+                        else r.ping = pingServidor(Data) ?? r.ping;
+                        alCambiar('download', r);
+                    },
+                    downloadComplete: ({ LastClientMeasurement, LastServerMeasurement }) => {
+                        if (LastClientMeasurement) r.descarga = LastClientMeasurement.MeanClientMbps;
+                        r.ping = pingServidor(LastServerMeasurement) ?? r.ping;
+                        alCambiar('upload', r);
+                    },
+                    uploadStart: () => alCambiar('upload', r),
+                    uploadMeasurement: ({ Source, Data }) => {
+                        if (Source === 'server') r.subida = subidaServidor(Data) ?? r.subida;
+                        alCambiar('upload', r);
+                    },
+                    uploadComplete: ({ LastServerMeasurement }) => {
+                        r.subida = subidaServidor(LastServerMeasurement) ?? r.subida;
+                    }
+                });
+            } finally {
+                URL.revokeObjectURL(urlDescarga);
+                URL.revokeObjectURL(urlSubida);
+            }
+            if (falla) console.warn('La prueba terminó con avisos:', falla);
+            return r;
+        }
+
         const FASES = {
-            latency: '⏱ Midiendo latencia…',
             download: '⬇ Midiendo descarga…',
             upload: '⬆ Midiendo subida…'
         };
+
+        let pantallaActiva = null;
+        async function mantenerPantalla() {
+            try { pantallaActiva = (await navigator.wakeLock?.request('screen')) || null; }
+            catch (e) { pantallaActiva = null; }
+        }
+        function soltarPantalla() {
+            try { pantallaActiva?.release(); } catch (e) { /* ya liberada */ }
+            pantallaActiva = null;
+        }
 
         let midiendo = false;
 
@@ -712,12 +770,17 @@
                 setEstado('Escribe el nombre de la red Wi-Fi a la que estás conectado.', 'error');
                 return;
             }
+            if (!aceptoEl.checked) {
+                setEstado('Marca la casilla para aceptar la política de datos de M-Lab y poder medir.', 'error');
+                return;
+            }
             try { localStorage.setItem('redWifi', red); } catch (e) { /* sin almacenamiento local */ }
 
             midiendo = true;
-            btn.disabled = zonaSelect.disabled = redInput.disabled = true;
+            btn.disabled = zonaSelect.disabled = redInput.disabled = aceptoEl.disabled = true;
             resultadosEl.style.display = 'none';
             mostrarValores({});
+            mantenerPantalla();
 
             try {
                 setEstado('📍 Obteniendo tu ubicación…');
@@ -735,14 +798,14 @@
 
                 barraEl.classList.add('activa');
                 resultadosEl.style.display = 'block';
-                setEstado('Zona: ' + ZONAS[zona].nombre + ' · ' + FASES.latency);
+                setEstado('🔎 Buscando el servidor más cercano…');
 
                 const final = await ejecutarTest((tipo, parcial) => {
                     mostrarValores(parcial);
-                    setEstado('Zona: ' + ZONAS[zona].nombre + ' · ' + (FASES[tipo] || 'Midiendo…'));
+                    setEstado(FASES[tipo] || 'Midiendo…');
                 });
 
-                if (!(final.descarga > 0) || !(final.subida > 0) || final.ping === null) {
+                if (!(final.descarga > 0) || !(final.subida > 0) || !(final.ping > 0)) {
                     throw new Error('No se pudo completar la medición. Revisa tu conexión e inténtalo de nuevo.');
                 }
                 mostrarValores(final);
@@ -753,8 +816,7 @@
                     red,
                     descarga: Math.round(final.descarga * 100) / 100,
                     subida: Math.round(final.subida * 100) / 100,
-                    ping: Math.round(final.ping * 10) / 10,
-                    jitter: Math.round((final.jitter ?? 0) * 10) / 10
+                    ping: Math.round(final.ping * 10) / 10
                 };
 
                 try {
@@ -768,8 +830,9 @@
                 console.error(e);
                 setEstado(e.message, 'error');
             } finally {
+                soltarPantalla();
                 barraEl.classList.remove('activa');
-                btn.disabled = zonaSelect.disabled = redInput.disabled = false;
+                btn.disabled = zonaSelect.disabled = redInput.disabled = aceptoEl.disabled = false;
                 midiendo = false;
             }
         }
