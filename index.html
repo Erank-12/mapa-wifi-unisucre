@@ -533,8 +533,7 @@
 
         function contenidoPopup(m) {
             const caja = el('div', 'popup-box');
-            caja.appendChild(el('div', 'zona-title', ZONAS[m.zona].nombre));
-            caja.appendChild(el('div', 'popup-red', '📶 Red: ' + m.red));
+            caja.appendChild(el('div', 'zona-title', '📶 ' + m.red));
             const grid = el('div', 'popup-stats');
             [['Descarga (Mbps)', m.descarga.toFixed(2)], ['Subida (Mbps)', m.subida.toFixed(2)],
              ['Ping (ms)', m.ping.toFixed(1)], ['Jitter (ms)', m.jitter.toFixed(1)]].forEach(([etiqueta, valor]) => {
