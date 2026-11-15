@@ -78,13 +78,13 @@
         }
 
         .campo { margin-bottom: 8px; }
-        .campo label {
+        .campo > label, .etiqueta {
             display: block;
             font-size: 10.5px;
             color: #9db89f;
             margin-bottom: 3px;
         }
-        .campo select, .campo input {
+        .campo select, .campo input[type="text"] {
             width: 100%;
             padding: 8px;
             font-size: 13px;
@@ -94,6 +94,60 @@
             color: #eee;
         }
         .campo select:disabled, .campo input:disabled { opacity: 0.5; }
+
+        /* Botones de opción (tipo "segmentado") */
+        .segmentos { display: flex; gap: 0; }
+        .segmentos button {
+            flex: 1;
+            padding: 7px 4px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #b8c9ba;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(241, 196, 15, 0.4);
+            cursor: pointer;
+        }
+        .segmentos button:first-child { border-radius: 6px 0 0 6px; }
+        .segmentos button:last-child { border-radius: 0 6px 6px 0; border-left: 0; }
+        .segmentos button.activo { background: rgba(46, 204, 113, 0.25); color: #2ecc71; }
+        .segmentos button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Interruptor (tipo iOS) */
+        .interruptor {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            font-size: 12px;
+            color: #e6efe7;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .interruptor input { position: absolute; opacity: 0; width: 0; height: 0; }
+        .deslizador {
+            position: relative;
+            flex-shrink: 0;
+            width: 48px;
+            height: 28px;
+            border-radius: 28px;
+            background: #555;
+            transition: background .2s ease;
+        }
+        .deslizador::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+            transition: transform .2s ease;
+        }
+        .interruptor input:checked + .deslizador { background: #00c853; }
+        .interruptor input:checked + .deslizador::after { transform: translateX(20px); }
+        .interruptor input:focus-visible + .deslizador { outline: 2px solid #f1c40f; outline-offset: 2px; }
 
         .consentimiento {
             display: flex;
@@ -155,6 +209,8 @@
         .stat-label { color: #f39c12; font-size: 10px; }
         .stat-value { font-weight: 700; color: #2ecc71; font-size: 16px; }
         .stat-unit { color: #9db89f; font-size: 10px; font-weight: 400; }
+        #detalle { margin-top: 8px; font-size: 10.5px; text-align: center; color: #9db89f; }
+        #detalle.aviso-estabilidad { color: #f39c12; }
 
         #estado {
             margin-top: 8px;
@@ -197,25 +253,27 @@
             color: #8a9a8c;
         }
 
-        .ranking-section {
+        .seccion {
             border-top: 1px solid rgba(241, 196, 15, 0.2);
             padding-top: 10px;
             margin-top: 12px;
         }
+        #conteo { margin-top: 6px; font-size: 10.5px; color: #9db89f; min-height: 14px; }
+
         .ranking-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 6px;
-            font-size: 11px;
+            padding: 8px 6px;
+            font-size: 12px;
             margin: 4px 0;
             background: rgba(255,255,255,0.05);
             border-radius: 4px;
         }
-        .ranking-position { font-weight: 700; color: #f1c40f; width: 20px; }
-        .ranking-nombre { flex: 1; margin-left: 8px; }
-        .ranking-value { font-weight: 600; color: #2ecc71; }
-        .ranking-vacio { font-size: 11px; color: #9db89f; padding: 4px 2px; }
+        .ranking-item.sin-datos { opacity: 0.55; }
+        .ranking-position { font-weight: 700; color: #f1c40f; width: 24px; }
+        .ranking-nombre { flex: 1; margin-left: 8px; font-weight: 600; }
+        .ranking-aviso { font-size: 10px; color: #9db89f; margin: -2px 0 6px 0; }
 
         .zone-label {
             background: rgba(15, 18, 15, 0.82) !important;
@@ -316,6 +374,14 @@
                 </datalist>
             </div>
 
+            <div class="campo">
+                <span class="etiqueta">Precisión de la medición</span>
+                <div class="segmentos" id="segPrecision">
+                    <button type="button" data-precision="alta" class="activo">Alta · 3 pasadas</button>
+                    <button type="button" data-precision="rapida">Rápida · 1 pasada</button>
+                </div>
+            </div>
+
             <label class="consentimiento">
                 <input type="checkbox" id="aceptoMlab">
                 <span>Acepto que M-Lab (el motor del test de velocidad de Google) guarde y publique el resultado junto con mi dirección IP.</span>
@@ -330,13 +396,29 @@
                     <div class="stat"><div class="stat-label">Subida</div><div class="stat-value" id="vUp">--</div><div class="stat-unit">Mbps</div></div>
                     <div class="stat"><div class="stat-label">Ping</div><div class="stat-value" id="vPing">--</div><div class="stat-unit">ms</div></div>
                 </div>
+                <div id="detalle"></div>
             </div>
 
             <div id="estado" style="display: none;"></div>
-            <p class="nota">Tu medición se publica en el mapa con tu ubicación y el nombre de red que escribas.</p>
+            <p class="nota">Tu medición se publica en el mapa con tu ubicación y el nombre de red que escribas. Consume bastantes datos.</p>
 
-            <div class="ranking-section">
-                <h3 style="margin-bottom: 6px;">🏆 Ranking de Descarga</h3>
+            <div class="seccion">
+                <h3>🗺 Mediciones en el mapa</h3>
+                <label class="interruptor">
+                    <span>Mostrar mediciones de otras personas</span>
+                    <input type="checkbox" id="verOtros" checked>
+                    <span class="deslizador"></span>
+                </label>
+                <span class="etiqueta">Mostrar</span>
+                <div class="segmentos" id="segTiempo">
+                    <button type="button" data-filtro="24h" class="activo">Últimas 24 horas</button>
+                    <button type="button" data-filtro="siempre">Siempre</button>
+                </div>
+                <div id="conteo"></div>
+            </div>
+
+            <div class="seccion">
+                <h3 style="margin-bottom: 6px;">🏆 Ranking de mejor red WiFi</h3>
                 <div id="ranking-list"></div>
             </div>
         </div>
@@ -359,8 +441,10 @@
 
         const VENTANA_MS = 24 * 60 * 60 * 1000;
         const CONSULTA_CADA_MS = 5000;
+        const HISTORIAL_MAX = 5000;
         const GPS_MAX_PRECISION_M = 150;
         const GPS_MAX_DIST_ZONA_M = 500;
+        const PASADAS = { alta: 3, rapida: 1 };
 
         const ZONAS = {
             biblioteca:    { nombre: 'Biblioteca',    lat: 9.31479142149925,  lng: -75.38830251874937 },
@@ -368,6 +452,8 @@
             cafeteria:     { nombre: 'Cafetería',     lat: 9.316013505876915, lng: -75.38663225411734 },
             polideportivo: { nombre: 'Polideportivo', lat: 9.316005859151925, lng: -75.38867881751805 }
         };
+        // Orden que se muestra en el ranking mientras no haya mediciones.
+        const ORDEN_BASE = ['biblioteca', 'bloque1', 'cafeteria', 'polideportivo'];
 
         // ==========================================================
         // UTILIDADES
@@ -397,7 +483,14 @@
             const min = Math.floor((Date.now() - ts) / 60000);
             if (min < 1) return 'hace menos de 1 min';
             if (min < 60) return 'hace ' + min + ' min';
-            return 'hace ' + Math.floor(min / 60) + ' h';
+            if (min < 60 * 24) return 'hace ' + Math.floor(min / 60) + ' h';
+            return 'hace ' + Math.floor(min / 1440) + ' d';
+        }
+
+        function mediana(valores) {
+            const o = [...valores].sort((a, b) => a - b);
+            const m = Math.floor(o.length / 2);
+            return o.length % 2 ? o[m] : (o[m - 1] + o[m]) / 2;
         }
 
         // ==========================================================
@@ -414,7 +507,7 @@
         }
         function ocultarAviso() { avisoEl.style.display = 'none'; }
 
-        // Cada almacén ofrece: suscribir(f) y guardar(datos).
+        // Cada almacén ofrece: suscribir(f), guardar(datos), cargarHistorial(), pausar() y reanudar().
         // f(clave, registro, propia) se llama por cada medición, incluida la que acaba de guardar.
         function crearAlmacenLocal() {
             const oyentes = [];
@@ -425,7 +518,10 @@
                     const clave = 'local' + (++n);
                     oyentes.forEach(f => f(clave, { ...datos, ts: Date.now() }, true));
                     return clave;
-                }
+                },
+                async cargarHistorial() { return { truncado: false }; },
+                pausar() {},
+                reanudar() {}
             };
         }
 
@@ -435,8 +531,11 @@
             if (SUPABASE_KEY.startsWith('eyJ')) cabeceras.Authorization = 'Bearer ' + SUPABASE_KEY;
 
             const oyentes = [];
-            let desdeMs = Date.now() - VENTANA_MS;
+            const inicioVentanaMs = Date.now() - VENTANA_MS;
+            let desdeMs = inicioVentanaMs;
             let fallos = 0;
+            let pausado = false;
+            let historialCargado = false;
 
             const aRegistro = r => ({
                 ts: Date.parse(r.ts), lat: r.lat, lng: r.lng, prec: r.prec ?? undefined, ubic: r.ubic,
@@ -458,7 +557,7 @@
             }
 
             async function ciclo() {
-                if (document.visibilityState !== 'hidden') {
+                if (!pausado && document.visibilityState !== 'hidden') {
                     try {
                         await consultar();
                         if (fallos >= 2) ocultarAviso();
@@ -486,7 +585,28 @@
                     const [fila] = await resp.json();
                     emitir(fila, true);
                     return String(fila.id);
-                }
+                },
+                // Trae las mediciones anteriores a las últimas 24 horas (hasta HISTORIAL_MAX).
+                async cargarHistorial() {
+                    if (historialCargado) return { truncado: false };
+                    const pagina = 1000;
+                    const antes = encodeURIComponent(new Date(inicioVentanaMs).toISOString());
+                    let total = 0;
+                    while (total < HISTORIAL_MAX) {
+                        const resp = await fetch(tabla + '?select=*&order=ts.desc,id.desc&limit=' + pagina +
+                            '&offset=' + total + '&ts=lt.' + antes, { headers: cabeceras });
+                        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                        const filas = await resp.json();
+                        filas.forEach(fila => emitir(fila, false));
+                        total += filas.length;
+                        if (filas.length < pagina) { historialCargado = true; return { truncado: false }; }
+                    }
+                    historialCargado = true;
+                    return { truncado: true };
+                },
+                // Durante una medición no se consulta la base, para no gastar ancho de banda.
+                pausar() { pausado = true; },
+                reanudar() { pausado = false; }
             };
         }
 
@@ -530,10 +650,25 @@
         });
 
         // ==========================================================
-        // MEDICIONES EN PANTALLA
+        // MEDICIONES EN PANTALLA (filtros y ranking)
         // ==========================================================
-        const mediciones = new Map();
-        const marcadores = new Map();
+        const registros = new Map();            // clave -> { m, propia, marcador }
+        let verOtros = true;                    // siempre empieza activado
+        let filtroTiempo = '24h';               // siempre empieza en "últimas 24 horas"
+        let estadoHistorial = '';               // '', 'cargando', 'error', 'truncado'
+
+        const verOtrosEl = document.getElementById('verOtros');
+        const conteoEl = document.getElementById('conteo');
+
+        // Las mediciones propias se recuerdan para seguir mostrándolas aunque se oculten las de otros.
+        const misIds = new Set();
+        try {
+            JSON.parse(localStorage.getItem('misMediciones') || '[]')
+                .filter(x => typeof x === 'string').forEach(x => misIds.add(x));
+        } catch (e) { /* sin almacenamiento local */ }
+        function guardarMisIds() {
+            try { localStorage.setItem('misMediciones', JSON.stringify([...misIds].slice(-300))); } catch (e) { /* sin almacenamiento local */ }
+        }
 
         function contenidoPopup(m) {
             const caja = el('div', 'popup-box');
@@ -552,63 +687,119 @@
             return caja;
         }
 
+        function crearMarcador(m) {
+            const color = colorPorVelocidad(m.descarga);
+            const contenedor = el('div', 'pulse-wrap');
+            const nucleo = el('div', 'pulse-core');
+            const anillo = el('div', 'pulse-ring');
+            nucleo.style.backgroundColor = color;
+            anillo.style.backgroundColor = color;
+            contenedor.append(nucleo, anillo);
+            const marcador = L.marker([m.lat, m.lng], {
+                icon: L.divIcon({ html: contenedor, iconSize: [26, 26], className: '' })
+            });
+            marcador.bindPopup(() => contenidoPopup(m), { closeButton: false });
+            return marcador;
+        }
+
         function agregarMedicion(clave, m, propia) {
             if (!ZONAS[m.zona]) return;
-
-            if (!mediciones.has(clave)) {
-                mediciones.set(clave, m);
-
-                const color = colorPorVelocidad(m.descarga);
-                const contenedor = el('div', 'pulse-wrap');
-                const nucleo = el('div', 'pulse-core');
-                const anillo = el('div', 'pulse-ring');
-                nucleo.style.backgroundColor = color;
-                anillo.style.backgroundColor = color;
-                contenedor.append(nucleo, anillo);
-
-                const marcador = L.marker([m.lat, m.lng], {
-                    icon: L.divIcon({ html: contenedor, iconSize: [26, 26], className: '' })
-                }).addTo(map);
-                marcador.bindPopup(() => contenidoPopup(m), { closeButton: false });
-                marcadores.set(clave, marcador);
-                actualizarRanking();
+            let reg = registros.get(clave);
+            if (!reg) {
+                reg = { m, propia: false, marcador: crearMarcador(m) };
+                registros.set(clave, reg);
             }
-
+            if ((propia || misIds.has(clave)) && !reg.propia) {
+                reg.propia = true;
+                if (!misIds.has(clave)) { misIds.add(clave); guardarMisIds(); }
+            }
+            actualizarVista();
             if (propia) {
                 map.flyTo([m.lat, m.lng], 18);
-                marcadores.get(clave).openPopup();
+                reg.marcador.openPopup();
             }
         }
 
-        function actualizarRanking() {
-            const desde = Date.now() - VENTANA_MS;
-            const porZona = {};
-            mediciones.forEach(m => {
-                if (m.ts < desde) return;
-                (porZona[m.zona] = porZona[m.zona] || []).push(m);
+        function actualizarVista() {
+            const limite = Date.now() - VENTANA_MS;
+            const enTiempo = reg => filtroTiempo === 'siempre' || reg.m.ts >= limite;
+            let visibles = 0;
+            const descargas = {};
+
+            registros.forEach(reg => {
+                if (!enTiempo(reg)) {
+                    if (map.hasLayer(reg.marcador)) reg.marcador.remove();
+                    return;
+                }
+                // El ranking usa todas las mediciones del periodo, se vean o no en el mapa.
+                (descargas[reg.m.zona] = descargas[reg.m.zona] || []).push(reg.m.descarga);
+
+                if (reg.propia || verOtros) {
+                    if (!map.hasLayer(reg.marcador)) reg.marcador.addTo(map);
+                    visibles++;
+                } else if (map.hasLayer(reg.marcador)) {
+                    reg.marcador.remove();
+                }
             });
-            const filas = Object.entries(porZona)
-                .map(([clave, lista]) => ({
-                    nombre: ZONAS[clave].nombre,
-                    descarga: lista.reduce((s, m) => s + m.descarga, 0) / lista.length
-                }))
-                .sort((a, b) => b.descarga - a.descarga);
+
+            let texto = visibles + (visibles === 1 ? ' medición en el mapa' : ' mediciones en el mapa');
+            if (estadoHistorial === 'cargando') texto = 'Cargando historial…';
+            else if (estadoHistorial === 'error') texto += ' · no se pudo cargar el historial completo';
+            else if (estadoHistorial === 'truncado') texto += ' · solo las ' + HISTORIAL_MAX + ' más recientes del historial';
+            conteoEl.textContent = texto;
+
+            actualizarRanking(descargas);
+        }
+
+        // Ranking: solo posición y zona. Se ordena por la descarga promedio medida;
+        // las zonas sin mediciones van al final (atenuadas) en el orden de referencia.
+        function actualizarRanking(descargas) {
+            const promedio = lista => lista.reduce((s, v) => s + v, 0) / lista.length;
+            const conDatos = ORDEN_BASE.filter(z => descargas[z])
+                .sort((a, b) => promedio(descargas[b]) - promedio(descargas[a]));
+            const sinDatos = ORDEN_BASE.filter(z => !descargas[z]);
 
             const cont = document.getElementById('ranking-list');
             cont.replaceChildren();
-            if (!filas.length) {
-                cont.appendChild(el('div', 'ranking-vacio', 'Aún no hay mediciones.'));
-                return;
+            if (!conDatos.length) {
+                cont.appendChild(el('div', 'ranking-aviso', 'Orden de referencia: se ajusta con las mediciones.'));
             }
             const medallas = ['🥇', '🥈', '🥉', '4️⃣'];
-            filas.forEach((f, i) => {
-                const fila = el('div', 'ranking-item');
-                fila.appendChild(el('span', 'ranking-position', medallas[i] || String(i + 1)));
-                fila.appendChild(el('span', 'ranking-nombre', f.nombre));
-                fila.appendChild(el('span', 'ranking-value', f.descarga.toFixed(2) + ' Mbps'));
+            [...conDatos, ...sinDatos].forEach((zona, i) => {
+                const fila = el('div', 'ranking-item' + (descargas[zona] ? '' : ' sin-datos'));
+                fila.appendChild(el('span', 'ranking-position', medallas[i]));
+                fila.appendChild(el('span', 'ranking-nombre', ZONAS[zona].nombre));
                 cont.appendChild(fila);
             });
         }
+
+        verOtrosEl.addEventListener('change', () => {
+            verOtros = verOtrosEl.checked;
+            actualizarVista();
+        });
+
+        document.querySelectorAll('#segTiempo button').forEach(boton => {
+            boton.addEventListener('click', async () => {
+                filtroTiempo = boton.dataset.filtro;
+                document.querySelectorAll('#segTiempo button').forEach(b => b.classList.toggle('activo', b === boton));
+                actualizarVista();
+                if (filtroTiempo === 'siempre' && estadoHistorial !== 'cargando') {
+                    estadoHistorial = 'cargando';
+                    actualizarVista();
+                    try {
+                        const r = await almacen.cargarHistorial();
+                        estadoHistorial = r.truncado ? 'truncado' : '';
+                    } catch (e) {
+                        console.warn('No se pudo cargar el historial:', e);
+                        estadoHistorial = 'error';
+                    }
+                    actualizarVista();
+                }
+            });
+        });
+
+        // Las mediciones de más de 24 horas salen solas de la vista si la página queda abierta.
+        setInterval(actualizarVista, 60000);
 
         // ==========================================================
         // MEDICIÓN DE VELOCIDAD (M-Lab NDT7, el motor del test de Google)
@@ -619,11 +810,21 @@
         const estadoEl = document.getElementById('estado');
         const barraEl = document.getElementById('barra');
         const resultadosEl = document.getElementById('resultados');
+        const detalleEl = document.getElementById('detalle');
+        const botonesPrecision = document.querySelectorAll('#segPrecision button');
         const vistas = {
             descarga: document.getElementById('vDown'),
             subida: document.getElementById('vUp'),
             ping: document.getElementById('vPing')
         };
+
+        let precision = 'alta';
+        botonesPrecision.forEach(boton => {
+            boton.addEventListener('click', () => {
+                precision = boton.dataset.precision;
+                botonesPrecision.forEach(b => b.classList.toggle('activo', b === boton));
+            });
+        });
 
         try {
             redInput.value = localStorage.getItem('redWifi') || 'Unisucre';
@@ -696,11 +897,11 @@
             return URL.createObjectURL(new Blob([codigo], { type: 'text/javascript' }));
         }
 
-        // Descarga: promedio del cliente durante los 10 s de la prueba (igual que el test de Google).
+        // Una pasada = descarga (10 s) + subida (10 s) contra el servidor M-Lab más cercano.
+        // Descarga: promedio del cliente durante la prueba (igual que el test de Google).
         // Subida: bytes que el servidor confirma haber recibido (bytes por µs × 8 = Mbps).
         // Ping: RTT mínimo medido por el servidor.
-        async function ejecutarTest(alCambiar) {
-            await cargarNdt7();
+        async function unaPasada(alCambiar) {
             const r = { descarga: null, subida: null, ping: null };
             let falla = null;
             const subidaServidor = d => (d && d.TCPInfo && d.TCPInfo.ElapsedTime > 0)
@@ -742,14 +943,48 @@
                 URL.revokeObjectURL(urlDescarga);
                 URL.revokeObjectURL(urlSubida);
             }
-            if (falla) console.warn('La prueba terminó con avisos:', falla);
+            if (falla) console.warn('La pasada terminó con avisos:', falla);
             return r;
+        }
+
+        // Varias pasadas y mediana: una sola prueba de 10 s varía mucho en Wi-Fi.
+        // La mediana descarta las pasadas anormalmente buenas o malas.
+        function combinar(validas, total) {
+            if (!validas.length) return { descarga: null, subida: null, ping: null, validas: 0, total, variacion: null };
+            const de = campo => validas.map(r => r[campo]);
+            const descarga = mediana(de('descarga')), subida = mediana(de('subida'));
+            const dispersion = (valores, central) => (Math.max(...valores) - Math.min(...valores)) / central * 100;
+            const variacion = validas.length > 1
+                ? Math.max(dispersion(de('descarga'), descarga), dispersion(de('subida'), subida)) : null;
+            return { descarga, subida, ping: mediana(de('ping')), validas: validas.length, total, variacion };
+        }
+
+        let segundoPlano = false;
+        async function ejecutarTest(pasadas, alCambiar) {
+            await cargarNdt7();
+            const validas = [];
+            for (let i = 1; i <= pasadas && !segundoPlano; i++) {
+                const r = await unaPasada((tipo, parcial) => alCambiar(tipo, parcial, i, pasadas));
+                if (r.descarga > 0 && r.subida > 0 && r.ping > 0) validas.push(r);
+            }
+            return combinar(validas, pasadas);
         }
 
         const FASES = {
             download: '⬇ Midiendo descarga…',
             upload: '⬆ Midiendo subida…'
         };
+
+        function describirResultado(f) {
+            if (f.total === 1) return { texto: '', aviso: false };
+            let texto = 'Mediana de ' + f.validas + (f.validas === 1 ? ' pasada' : ' pasadas');
+            if (f.validas < f.total) texto = f.validas + ' de ' + f.total + ' pasadas válidas';
+            if (f.variacion === null) return { texto, aviso: false };
+            texto += ' · variación ' + Math.round(f.variacion) + ' %';
+            if (f.variacion <= 10) return { texto: texto + ' · red estable', aviso: false };
+            if (f.variacion <= 25) return { texto: texto + ' · red variable', aviso: false };
+            return { texto: texto + ' · red inestable, conviene repetir', aviso: true };
+        }
 
         let pantallaActiva = null;
         async function mantenerPantalla() {
@@ -762,6 +997,17 @@
         }
 
         let midiendo = false;
+
+        // Si la página pasa a segundo plano durante la prueba, el navegador frena la red
+        // y el resultado sale bajo; en ese caso se descarta.
+        document.addEventListener('visibilitychange', () => {
+            if (midiendo && document.visibilityState === 'hidden') segundoPlano = true;
+        });
+
+        function bloquearControles(bloqueado) {
+            btn.disabled = zonaSelect.disabled = redInput.disabled = aceptoEl.disabled = bloqueado;
+            botonesPrecision.forEach(b => { b.disabled = bloqueado; });
+        }
 
         async function medir() {
             if (midiendo) return;
@@ -777,10 +1023,14 @@
             try { localStorage.setItem('redWifi', red); } catch (e) { /* sin almacenamiento local */ }
 
             midiendo = true;
-            btn.disabled = zonaSelect.disabled = redInput.disabled = aceptoEl.disabled = true;
+            segundoPlano = false;
+            bloquearControles(true);
             resultadosEl.style.display = 'none';
+            detalleEl.textContent = '';
+            detalleEl.classList.remove('aviso-estabilidad');
             mostrarValores({});
             mantenerPantalla();
+            almacen.pausar();
 
             try {
                 setEstado('📍 Obteniendo tu ubicación…');
@@ -800,15 +1050,22 @@
                 resultadosEl.style.display = 'block';
                 setEstado('🔎 Buscando el servidor más cercano…');
 
-                const final = await ejecutarTest((tipo, parcial) => {
+                const pasadas = PASADAS[precision];
+                const final = await ejecutarTest(pasadas, (tipo, parcial, i, n) => {
                     mostrarValores(parcial);
-                    setEstado(FASES[tipo] || 'Midiendo…');
+                    setEstado((FASES[tipo] || 'Midiendo…') + (n > 1 ? ' (pasada ' + i + ' de ' + n + ')' : ''));
                 });
 
+                if (segundoPlano) {
+                    throw new Error('La medición se interrumpió porque saliste de la página. Inténtalo de nuevo sin cambiar de aplicación.');
+                }
                 if (!(final.descarga > 0) || !(final.subida > 0) || !(final.ping > 0)) {
                     throw new Error('No se pudo completar la medición. Revisa tu conexión e inténtalo de nuevo.');
                 }
                 mostrarValores(final);
+                const detalle = describirResultado(final);
+                detalleEl.textContent = detalle.texto;
+                detalleEl.classList.toggle('aviso-estabilidad', detalle.aviso);
 
                 const medicion = {
                     ...resolverUbicacion(pos, zona),
@@ -830,9 +1087,10 @@
                 console.error(e);
                 setEstado(e.message, 'error');
             } finally {
+                almacen.reanudar();
                 soltarPantalla();
                 barraEl.classList.remove('activa');
-                btn.disabled = zonaSelect.disabled = redInput.disabled = aceptoEl.disabled = false;
+                bloquearControles(false);
                 midiendo = false;
             }
         }
@@ -844,7 +1102,7 @@
         // ==========================================================
         const almacen = crearAlmacen();
         almacen.suscribir(agregarMedicion);
-        actualizarRanking();
+        actualizarVista();
     </script>
 </body>
 </html>
