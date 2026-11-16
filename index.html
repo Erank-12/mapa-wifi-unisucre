@@ -400,7 +400,7 @@
             </div>
 
             <div id="estado" style="display: none;"></div>
-            <p class="nota">Tu medición se publica en el mapa con tu ubicación y el nombre de red que escribas. Consume bastantes datos.</p>
+            <p class="nota">Tu medición se publica en el mapa con tu ubicación y el nombre de red que escribas. Usa 4 conexiones en paralelo, como Speedtest, y consume bastantes datos (cientos de MB en la opción de 3 pasadas). Para compararla con otro medidor, hazlo uno después del otro, nunca a la vez: si corren juntos se reparten el ancho de banda.</p>
 
             <div class="seccion">
                 <h3>🗺 Mediciones en el mapa</h3>
@@ -436,7 +436,13 @@
         const SUPABASE_URL = "https://yrpghyzxnhheqjwbviaf.supabase.co";
         const SUPABASE_KEY = "sb_publishable_34vsM0N4YzMzRsycvJjp5g_Miwy3Nfa";
 
-        // Cliente oficial de M-Lab (el motor del test de velocidad de Google).
+        // Motores de M-Lab (la red abierta que usa el test de velocidad de Google).
+        // MSAK: varias conexiones en paralelo, como hace Ookla Speedtest (motor principal).
+        // NDT7: una sola conexión; solo se usa si MSAK no está disponible.
+        const MSAK_URL = 'https://cdn.jsdelivr.net/npm/@m-lab/msak@0.3.2/dist/msak.min.js';
+        const MSAK_FLUJOS = 4;               // conexiones simultáneas (máximo permitido: 4)
+        const MSAK_DURACION_MS = 10000;      // por sentido (descarga y subida)
+        const MSAK_DESCARTE = 0.3;           // se ignora el 30 % inicial (arranque lento de TCP)
         const NDT7_BASE = 'https://cdn.jsdelivr.net/npm/@m-lab/ndt7@0.1.5/src/';
 
         const VENTANA_MS = 24 * 60 * 60 * 1000;
@@ -802,7 +808,7 @@
         setInterval(actualizarVista, 60000);
 
         // ==========================================================
-        // MEDICIÓN DE VELOCIDAD (M-Lab NDT7, el motor del test de Google)
+        // MEDICIÓN DE VELOCIDAD (M-Lab MSAK con varias conexiones; NDT7 de respaldo)
         // ==========================================================
         const btn = document.getElementById('measureBtn');
         const redInput = document.getElementById('redInput');
@@ -897,17 +903,102 @@
             return URL.createObjectURL(new Blob([codigo], { type: 'text/javascript' }));
         }
 
-        // Una pasada = descarga (10 s) + subida (10 s) contra el servidor M-Lab más cercano.
-        // Descarga: promedio del cliente durante la prueba (igual que el test de Google).
-        // Subida: bytes que el servidor confirma haber recibido (bytes por µs × 8 = Mbps).
-        // Ping: RTT mínimo medido por el servidor.
-        async function unaPasada(alCambiar) {
-            const r = { descarga: null, subida: null, ping: null };
+        function cargarMsak() {
+            return new Promise((resolver, rechazar) => {
+                if (window.msak) return resolver();
+                const script = document.createElement('script');
+                script.src = MSAK_URL;
+                script.onload = () => window.msak ? resolver() : rechazar(new Error('Motor MSAK no disponible'));
+                script.onerror = () => rechazar(new Error('No se pudo cargar el motor de medición MSAK.'));
+                document.head.appendChild(script);
+            });
+        }
+
+        // Velocidad "estable" de un sentido (descarga o subida) con varias conexiones:
+        // se suman los bytes de todas las conexiones y se mide la velocidad SOLO después
+        // del arranque lento de TCP (se ignora el primer 30 % de la prueba). Así el valor
+        // refleja la capacidad real del enlace y no un promedio rebajado por los primeros
+        // segundos, que es lo que hacen los medidores comerciales.
+        function velocidadEstable(muestras) {
+            const porFlujo = new Map();
+            muestras.forEach(m => {
+                if (!porFlujo.has(m.s)) porFlujo.set(m.s, [{ t: 0, b: 0 }]);
+                porFlujo.get(m.s).push({ t: m.t, b: m.b });
+            });
+            const flujos = [...porFlujo.values()].filter(l => l.length >= 3);
+            if (!flujos.length) return null;
+            flujos.forEach(l => l.sort((a, b) => a.t - b.t));
+            const fin = Math.min(...flujos.map(l => l[l.length - 1].t));
+            if (!(fin > 2)) return null;
+            const ini = fin * MSAK_DESCARTE;
+            const bytesEn = (l, t) => {
+                const j = l.findIndex(x => x.t >= t);
+                if (j <= 0) return l[0].b;
+                const a = l[j - 1], b = l[j];
+                return b.t === a.t ? b.b : a.b + (b.b - a.b) * (t - a.t) / (b.t - a.t);
+            };
+            const bytes = flujos.reduce((suma, l) => suma + bytesEn(l, fin) - bytesEn(l, ini), 0);
+            return bytes * 8 / 1e6 / (fin - ini);
+        }
+
+        // Una pasada con MSAK = descarga + subida con varias conexiones en paralelo
+        // contra el servidor M-Lab más cercano.
+        async function unaPasadaMsak(alCambiar) {
+            await cargarMsak();
+            const r = { descarga: null, subida: null, ping: null, motor: 'MSAK', servidor: null };
+            const muestras = { descarga: [], subida: [] };
+            let falla = null;
+            const guardar = tipo => ({ stream, measurement }) => {
+                const app = measurement && measurement.Application;
+                if (app && measurement.ElapsedTime > 0) {
+                    muestras[tipo].push({ s: stream, t: measurement.ElapsedTime / 1e6, b: app.BytesReceived || 0 });
+                }
+            };
+            const rtt = res => {
+                if (res.minRTT > 0) r.ping = Math.min(r.ping ?? Infinity, res.minRTT / 1000);
+            };
+            const nombreServidor = srv => {
+                const lugar = srv && srv.location;
+                return lugar ? [lugar.city, lugar.country].filter(Boolean).join(', ') : null;
+            };
+
+            const cliente = new msak.Client('mapa-wifi-unisucre', '1.0.0', {
+                onError: mensaje => { falla = falla || String(mensaje); console.warn('MSAK:', mensaje); },
+                onDownloadStart: srv => { r.servidor = nombreServidor(srv) || r.servidor; alCambiar('download', r); },
+                onDownloadMeasurement: guardar('descarga'),
+                onDownloadResult: res => { r.descarga = res.goodput; rtt(res); alCambiar('download', r); },
+                onUploadStart: () => alCambiar('upload', r),
+                onUploadMeasurement: guardar('subida'),
+                onUploadResult: res => { r.subida = res.goodput; rtt(res); alCambiar('upload', r); }
+            });
+            cliente.streams = MSAK_FLUJOS;
+            cliente.cc = 'bbr';
+            cliente.duration = MSAK_DURACION_MS;
+
+            try {
+                await cliente.start();
+            } catch (e) {
+                falla = falla || String(e && e.message || e);
+                console.warn('MSAK terminó con error:', e);
+            }
+            // Valor final: velocidad estable; si no hay datos suficientes, el promedio de la biblioteca.
+            r.descarga = velocidadEstable(muestras.descarga) ?? r.descarga;
+            r.subida = velocidadEstable(muestras.subida) ?? r.subida;
+            if (falla) console.warn('La pasada MSAK terminó con avisos:', falla);
+            return r;
+        }
+
+        // Respaldo: una sola conexión NDT7 (el motor anterior). Una pasada = descarga (10 s) +
+        // subida (10 s). Descarga: promedio del cliente; subida: bytes confirmados por el
+        // servidor (bytes por µs × 8 = Mbps); ping: RTT mínimo medido por el servidor.
+        async function unaPasadaNdt7(alCambiar) {
+            const r = { descarga: null, subida: null, ping: null, motor: 'NDT7', servidor: null };
             let falla = null;
             const subidaServidor = d => (d && d.TCPInfo && d.TCPInfo.ElapsedTime > 0)
                 ? d.TCPInfo.BytesReceived * 8 / d.TCPInfo.ElapsedTime : null;
             const pingServidor = d => (d && d.TCPInfo && d.TCPInfo.MinRTT > 0) ? d.TCPInfo.MinRTT / 1000 : null;
 
+            await cargarNdt7();
             const urlDescarga = urlDeWorker('ndt7-download-worker.js');
             const urlSubida = urlDeWorker('ndt7-upload-worker.js');
             try {
@@ -947,21 +1038,46 @@
             return r;
         }
 
+        // Motor activo durante una medición: empieza con MSAK y, si este falla del todo
+        // (servidor no disponible, bloqueo de red…), pasa a NDT7 para no dejar al usuario sin medir.
+        // Las pasadas de un mismo resultado nunca mezclan motores: el respaldo solo se usa
+        // si MSAK no ha dado ninguna pasada válida en esta medición.
+        let motorActual = 'MSAK';
+        let pasadasMsakValidas = 0;
+        async function unaPasada(alCambiar) {
+            if (motorActual === 'MSAK') {
+                try {
+                    const r = await unaPasadaMsak(alCambiar);
+                    if (r.descarga > 0 && r.subida > 0 && r.ping > 0) { pasadasMsakValidas++; return r; }
+                } catch (e) {
+                    console.warn('MSAK falló:', e);
+                }
+                if (segundoPlano || pasadasMsakValidas > 0) return { descarga: null, subida: null, ping: null };
+                console.warn('MSAK no devolvió un resultado completo; se usa NDT7.');
+                motorActual = 'NDT7';
+            } else if (pasadasMsakValidas > 0) {
+                return { descarga: null, subida: null, ping: null };
+            }
+            return unaPasadaNdt7(alCambiar);
+        }
+
         // Varias pasadas y mediana: una sola prueba de 10 s varía mucho en Wi-Fi.
         // La mediana descarta las pasadas anormalmente buenas o malas.
         function combinar(validas, total) {
-            if (!validas.length) return { descarga: null, subida: null, ping: null, validas: 0, total, variacion: null };
+            if (!validas.length) return { descarga: null, subida: null, ping: null, validas: 0, total, variacion: null, motor: null, servidor: null };
             const de = campo => validas.map(r => r[campo]);
             const descarga = mediana(de('descarga')), subida = mediana(de('subida'));
             const dispersion = (valores, central) => (Math.max(...valores) - Math.min(...valores)) / central * 100;
             const variacion = validas.length > 1
                 ? Math.max(dispersion(de('descarga'), descarga), dispersion(de('subida'), subida)) : null;
-            return { descarga, subida, ping: mediana(de('ping')), validas: validas.length, total, variacion };
+            const servidor = validas.map(r => r.servidor).find(Boolean) || null;
+            return { descarga, subida, ping: mediana(de('ping')), validas: validas.length, total, variacion, motor: validas[0].motor, servidor };
         }
 
         let segundoPlano = false;
         async function ejecutarTest(pasadas, alCambiar) {
-            await cargarNdt7();
+            motorActual = 'MSAK';
+            pasadasMsakValidas = 0;
             const validas = [];
             for (let i = 1; i <= pasadas && !segundoPlano; i++) {
                 const r = await unaPasada((tipo, parcial) => alCambiar(tipo, parcial, i, pasadas));
@@ -976,14 +1092,23 @@
         };
 
         function describirResultado(f) {
-            if (f.total === 1) return { texto: '', aviso: false };
-            let texto = 'Mediana de ' + f.validas + (f.validas === 1 ? ' pasada' : ' pasadas');
-            if (f.validas < f.total) texto = f.validas + ' de ' + f.total + ' pasadas válidas';
-            if (f.variacion === null) return { texto, aviso: false };
-            texto += ' · variación ' + Math.round(f.variacion) + ' %';
-            if (f.variacion <= 10) return { texto: texto + ' · red estable', aviso: false };
-            if (f.variacion <= 25) return { texto: texto + ' · red variable', aviso: false };
-            return { texto: texto + ' · red inestable, conviene repetir', aviso: true };
+            const partes = [];
+            if (f.motor === 'MSAK') partes.push(MSAK_FLUJOS + ' conexiones en paralelo');
+            else if (f.motor === 'NDT7') partes.push('1 conexión (motor de respaldo)');
+            if (f.servidor) partes.push('servidor ' + f.servidor);
+            let aviso = false;
+            if (f.total > 1) {
+                partes.push(f.validas < f.total ? f.validas + ' de ' + f.total + ' pasadas válidas'
+                    : 'mediana de ' + f.validas + ' pasadas');
+                if (f.variacion !== null) {
+                    partes.push('variación ' + Math.round(f.variacion) + ' %');
+                    if (f.variacion <= 10) partes.push('red estable');
+                    else if (f.variacion <= 25) partes.push('red variable');
+                    else { partes.push('red inestable, conviene repetir'); aviso = true; }
+                }
+            }
+            const texto = partes.join(' · ');
+            return { texto: texto.charAt(0).toUpperCase() + texto.slice(1), aviso };
         }
 
         let pantallaActiva = null;
